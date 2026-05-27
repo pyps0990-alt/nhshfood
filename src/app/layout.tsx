@@ -17,6 +17,12 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "內湖高中熱食部",
   description: "內湖高中熱食部線上訂餐系統",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "熱食部",
+  },
 };
 
 export default function RootLayout({
@@ -28,6 +34,11 @@ export default function RootLayout({
     <html lang="zh-TW" className={`${geist.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-gray-50 font-[family-name:var(--font-geist)]">
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js')}`,
+          }}
+        />
       </body>
     </html>
   );

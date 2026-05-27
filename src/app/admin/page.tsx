@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 
 interface OrderSummary {
@@ -37,20 +37,54 @@ export default function AdminPage() {
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [dept, setDept] = useState<string>("breakfast");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const prevCountRef = useRef<number>(0);
 
-  function fetchOrders() {
+  const playNotification = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 800;
+      gain.gain.value = 0.3;
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+      setTimeout(() => {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.frequency.value = 1000;
+        gain2.gain.value = 0.3;
+        osc2.start();
+        osc2.stop(ctx.currentTime + 0.2);
+      }, 180);
+    } catch {}
+  }, [soundEnabled]);
+
+  const fetchOrders = useCallback(() => {
     const params = new URLSearchParams({ department: dept });
     if (filterStatus !== "all") params.set("status", filterStatus);
     fetch(`/api/orders?${params}`)
       .then((r) => r.json())
-      .then(setOrders);
-  }
+      .then((data: OrderSummary[]) => {
+        const pendingCount = data.filter((o) => o.status === "pending").length;
+        if (prevCountRef.current > 0 && pendingCount > prevCountRef.current) {
+          playNotification();
+        }
+        prevCountRef.current = pendingCount;
+        setOrders(data);
+      });
+  }, [dept, filterStatus, playNotification]);
 
   useEffect(() => {
     fetchOrders();
-    const timer = setInterval(fetchOrders, 10000);
+    const timer = setInterval(fetchOrders, 5000);
     return () => clearInterval(timer);
-  }, [dept, filterStatus]);
+  }, [fetchOrders]);
 
   async function updateStatus(orderId: number, status: string) {
     await fetch(`/api/orders/${orderId}`, {
@@ -76,7 +110,14 @@ export default function AdminPage() {
       <header className="bg-gray-900 text-white px-4 py-3 flex items-center gap-4">
         <Link href="/" className="text-xl">←</Link>
         <h1 className="text-lg font-bold">管理面板</h1>
-        <Link href="/admin/menu" className="ml-auto text-sm bg-gray-700 px-3 py-1 rounded-lg">
+        <button
+          onClick={() => setSoundEnabled(!soundEnabled)}
+          className="ml-auto text-sm bg-gray-700 px-3 py-1 rounded-lg"
+          title={soundEnabled ? "關閉通知音效" : "開啟通知音效"}
+        >
+          {soundEnabled ? "🔔" : "🔕"}
+        </button>
+        <Link href="/admin/menu" className="text-sm bg-gray-700 px-3 py-1 rounded-lg">
           菜單管理
         </Link>
         <button

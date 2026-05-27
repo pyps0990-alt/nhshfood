@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import type { MenuItem } from "@/types";
 
@@ -14,6 +14,9 @@ export default function AdminMenuPage() {
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   function fetchItems() {
     fetch(`/api/menu?department=${dept}&all=true`)
@@ -30,6 +33,7 @@ export default function AdminMenuPage() {
     setPrice("");
     setCategory("");
     setDescription("");
+    setImageUrl("");
     setEditing(null);
     setShowForm(false);
   }
@@ -40,7 +44,20 @@ export default function AdminMenuPage() {
     setPrice(String(item.price));
     setCategory(item.category);
     setDescription(item.description || "");
+    setImageUrl(item.imageUrl || "");
     setShowForm(true);
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await fetch("/api/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    setImageUrl(data.url);
+    setUploading(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,6 +68,7 @@ export default function AdminMenuPage() {
       category,
       department: dept,
       description: description || null,
+      imageUrl: imageUrl || null,
     };
 
     if (editing) {
@@ -139,6 +157,32 @@ export default function AdminMenuPage() {
             placeholder="描述（選填）"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg"
           />
+
+          {/* 圖片上傳 */}
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              onChange={handleUpload}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploading}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50"
+            >
+              {uploading ? "上傳中..." : "上傳圖片"}
+            </button>
+            {imageUrl && (
+              <div className="flex items-center gap-2">
+                <img src={imageUrl} alt="" className="w-10 h-10 rounded object-cover" />
+                <button type="button" onClick={() => setImageUrl("")} className="text-xs text-red-500">移除</button>
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-2">
             <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium">
               {editing ? "更新" : "新增"}
@@ -156,20 +200,27 @@ export default function AdminMenuPage() {
         )}
         {items.map((item) => (
           <div key={item.id} className="bg-white rounded-xl p-4 border border-gray-100 flex items-center gap-3">
-            <div className="flex-1">
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt={item.name} className="w-12 h-12 rounded-lg object-cover" />
+            ) : (
+              <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center text-lg">
+                {dept === "breakfast" ? "🥪" : "🍱"}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-semibold">{item.name}</span>
-                <span className="text-xs text-gray-400">{item.category}</span>
+                <span className="font-semibold truncate">{item.name}</span>
+                <span className="text-xs text-gray-400 shrink-0">{item.category}</span>
                 {!item.available && (
-                  <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">停售</span>
+                  <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full shrink-0">停售</span>
                 )}
               </div>
               <p className="text-sm text-gray-500">${item.price} {item.description && `· ${item.description}`}</p>
             </div>
-            <button onClick={() => startEdit(item)} className="text-sm text-blue-500">編輯</button>
+            <button onClick={() => startEdit(item)} className="text-sm text-blue-500 shrink-0">編輯</button>
             <button
               onClick={() => toggleAvailable(item)}
-              className={`text-sm ${item.available ? "text-red-500" : "text-green-500"}`}
+              className={`text-sm shrink-0 ${item.available ? "text-red-500" : "text-green-500"}`}
             >
               {item.available ? "停售" : "上架"}
             </button>
