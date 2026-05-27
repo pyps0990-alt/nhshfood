@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model MenuItem {
+  id            Int         @id @default(autoincrement())
+  name          String
+  description   String?
+  price         Int
+  category      String      // 如：主食、點心、飲料
+  department    String      // "breakfast" | "lunch"
+  imageUrl      String?
+  available     Boolean     @default(true)
+  availableFrom String?     // "07:00"
+  availableTo   String?     // "17:00"
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  studentId   String
+  studentName String?
+  className   String?
+  department  String      // "breakfast" | "lunch"
+  status      String      @default("pending") // pending | confirmed | ready | picked_up | cancelled
+  totalPrice  Int
+  note        String?
+  pickupTime  String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  items       OrderItem[]
+}
+
+model OrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  menuItemId Int
+  quantity   Int
+  price      Int
+  order      Order    @relation(fields: [orderId], references: [id])
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+}
+
+model Admin {
+  id           Int    @id @default(autoincrement())
+  username     String @unique
+  passwordHash String
+}
