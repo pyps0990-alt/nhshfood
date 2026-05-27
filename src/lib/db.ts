@@ -28,14 +28,22 @@ export interface MenuItemData {
 }
 
 export async function getMenuItems(department?: string, includeAll = false) {
-  const constraints: QueryConstraint[] = [];
-  if (department) constraints.push(where("department", "==", department));
-  if (!includeAll) constraints.push(where("available", "==", true));
-  constraints.push(orderBy("category"));
+  // Simple query - filter in JS to avoid composite index requirements
+  const q = department
+    ? query(collection(db, "menuItems"), where("department", "==", department))
+    : query(collection(db, "menuItems"));
 
-  const q = query(collection(db, "menuItems"), ...constraints);
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as MenuItemData));
+  let items = snap.docs.map((d) => ({ id: d.id, ...d.data() } as MenuItemData));
+
+  if (!includeAll) {
+    items = items.filter((i) => i.available);
+  }
+
+  // Sort by category in JS
+  items.sort((a, b) => (a.category || "").localeCompare(b.category || ""));
+
+  return items;
 }
 
 export async function addMenuItem(data: Omit<MenuItemData, "id" | "createdAt">) {
@@ -81,8 +89,7 @@ export async function createOrder(data: Omit<OrderData, "id" | "orderNumber" | "
 
   const q = query(
     collection(db, "orders"),
-    where("createdAt", ">=", todayStart),
-    orderBy("createdAt", "desc")
+    where("createdAt", ">=", todayStart)
   );
   const snap = await getDocs(q);
   const orderNumber = snap.size + 1;
@@ -107,14 +114,13 @@ export async function getOrder(id: string): Promise<OrderData | null> {
 }
 
 export async function getOrders(department?: string, status?: string) {
+  // Simple query to avoid composite index - filter & sort in JS
   const constraints: QueryConstraint[] = [];
   if (department) constraints.push(where("department", "==", department));
-  if (status) constraints.push(where("status", "==", status));
-  constraints.push(orderBy("createdAt", "desc"));
 
   const q = query(collection(db, "orders"), ...constraints);
   const snap = await getDocs(q);
-  return snap.docs.map((d) => {
+  let orders = snap.docs.map((d) => {
     const data = d.data();
     return {
       id: d.id,
@@ -122,6 +128,16 @@ export async function getOrders(department?: string, status?: string) {
       createdAt: data.createdAt?.toDate?.() ?? new Date(),
     } as OrderData;
   });
+
+  // Filter by status in JS
+  if (status) {
+    orders = orders.filter((o) => o.status === status);
+  }
+
+  // Sort by createdAt desc in JS
+  orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+  return orders;
 }
 
 export async function updateOrderStatus(id: string, status: string) {
@@ -133,12 +149,10 @@ export function subscribeToOrders(
   department: string,
   callback: (orders: OrderData[]) => void
 ) {
-  const constraints: QueryConstraint[] = [
-    where("department", "==", department),
-    orderBy("createdAt", "desc"),
-  ];
-
-  const q = query(collection(db, "orders"), ...constraints);
+  const q = query(
+    collection(db, "orders"),
+    where("department", "==", department)
+  );
   return onSnapshot(q, (snap) => {
     const orders = snap.docs.map((d) => {
       const data = d.data();
@@ -148,6 +162,7 @@ export function subscribeToOrders(
         createdAt: data.createdAt?.toDate?.() ?? new Date(),
       } as OrderData;
     });
+    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     callback(orders);
   });
 }
