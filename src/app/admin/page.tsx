@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import type { Order } from "@/types";
+import { useOrders, updateOrderStatusDirect } from "@/lib/hooks";
 
 const statusFlow = ["pending", "confirmed", "ready", "picked_up"];
 const statusLabels: Record<string, string> = {
@@ -21,11 +21,12 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
   const [dept, setDept] = useState<string>("breakfast");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [soundEnabled, setSoundEnabled] = useState(true);
   const prevCountRef = useRef<number>(0);
+
+  const { orders } = useOrders(dept, filterStatus);
 
   const playNotification = useCallback(() => {
     if (!soundEnabled) return;
@@ -52,35 +53,13 @@ export default function AdminPage() {
     } catch {}
   }, [soundEnabled]);
 
-  const fetchOrders = useCallback(() => {
-    const params = new URLSearchParams({ department: dept });
-    if (filterStatus !== "all") params.set("status", filterStatus);
-    fetch(`/api/orders?${params}`)
-      .then((r) => r.json())
-      .then((data: Order[]) => {
-        const pendingCount = data.filter((o) => o.status === "pending").length;
-        if (prevCountRef.current > 0 && pendingCount > prevCountRef.current) {
-          playNotification();
-        }
-        prevCountRef.current = pendingCount;
-        setOrders(data);
-      });
-  }, [dept, filterStatus, playNotification]);
-
   useEffect(() => {
-    fetchOrders();
-    const timer = setInterval(fetchOrders, 5000);
-    return () => clearInterval(timer);
-  }, [fetchOrders]);
-
-  async function updateStatus(orderId: string, status: string) {
-    await fetch(`/api/orders/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    fetchOrders();
-  }
+    const pendingCount = orders.filter((o) => o.status === "pending").length;
+    if (prevCountRef.current > 0 && pendingCount > prevCountRef.current) {
+      playNotification();
+    }
+    prevCountRef.current = pendingCount;
+  }, [orders, playNotification]);
 
   function nextStatus(current: string) {
     const idx = statusFlow.indexOf(current);
@@ -98,71 +77,42 @@ export default function AdminPage() {
         <Link href="/" className="text-xl hover:opacity-80 transition-opacity">←</Link>
         <h1 className="text-lg font-bold tracking-tight">管理面板</h1>
         <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className="text-sm bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl transition-colors"
-          >
+          <button onClick={() => setSoundEnabled(!soundEnabled)}
+            className="text-sm bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl transition-colors">
             {soundEnabled ? "🔔" : "🔕"}
           </button>
-          <Link href="/pos" className="text-sm bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl font-semibold transition-colors">
-            POS
-          </Link>
-          <Link href="/admin/menu" className="text-sm bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-xl transition-colors">
-            菜單
-          </Link>
-          <button
-            onClick={async () => {
-              await fetch("/api/auth", { method: "DELETE" });
-              window.location.href = "/admin/login";
-            }}
-            className="text-sm bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-xl transition-colors"
-          >
-            登出
-          </button>
+          <Link href="/pos" className="text-sm bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl font-semibold transition-colors">POS</Link>
+          <Link href="/admin/menu" className="text-sm bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-xl transition-colors">菜單</Link>
+          <button onClick={async () => { await fetch("/api/auth", { method: "DELETE" }); window.location.href = "/admin/login"; }}
+            className="text-sm bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-xl transition-colors">登出</button>
         </div>
       </header>
 
       <div className="flex gap-2 px-5 py-4 border-b border-stone-100">
         {["breakfast", "lunch"].map((d) => (
-          <button
-            key={d}
-            onClick={() => setDept(d)}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
-              dept === d ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-            }`}
-          >
+          <button key={d} onClick={() => setDept(d)}
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${dept === d ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}>
             {d === "breakfast" ? "早餐部" : "午餐部"}
           </button>
         ))}
       </div>
 
       <div className="px-5 py-4 flex gap-4 text-sm">
-        <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-semibold border border-blue-100">
-          今日 {todayOrders.length} 筆
-        </span>
-        <span className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl font-semibold border border-emerald-100">
-          營業額 ${todayRevenue}
-        </span>
+        <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-semibold border border-blue-100">今日 {todayOrders.length} 筆</span>
+        <span className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl font-semibold border border-emerald-100">營業額 ${todayRevenue}</span>
       </div>
 
       <div className="flex gap-2 px-5 py-2 overflow-x-auto">
         {["all", ...statusFlow, "cancelled"].map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilterStatus(s)}
-            className={`px-4 py-1.5 rounded-xl text-xs whitespace-nowrap font-medium transition-all ${
-              filterStatus === s ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
-            }`}
-          >
+          <button key={s} onClick={() => setFilterStatus(s)}
+            className={`px-4 py-1.5 rounded-xl text-xs whitespace-nowrap font-medium transition-all ${filterStatus === s ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-500 hover:bg-stone-200"}`}>
             {s === "all" ? "全部" : statusLabels[s]}
           </button>
         ))}
       </div>
 
       <main className="flex-1 px-5 py-4 space-y-3 pb-8">
-        {orders.length === 0 && (
-          <p className="text-center text-stone-400 mt-10">沒有訂單</p>
-        )}
+        {orders.length === 0 && <p className="text-center text-stone-400 mt-10">沒有訂單</p>}
         {orders.map((order) => {
           const next = nextStatus(order.status);
           return (
@@ -170,46 +120,31 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
                   <span className="font-black text-xl text-stone-900">#{order.orderNumber}</span>
-                  <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${statusColors[order.status]}`}>
-                    {statusLabels[order.status]}
-                  </span>
+                  <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${statusColors[order.status]}`}>{statusLabels[order.status]}</span>
                 </div>
                 <span className="text-sm text-stone-400">
                   {new Date(order.createdAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
-
               <div className="text-sm text-stone-600 space-y-0.5">
                 <p className="font-medium">{order.className} {order.studentId} {order.studentName}</p>
                 {order.pickupTime && <p>取餐：{order.pickupTime}</p>}
                 {order.note && <p className="text-orange-600 font-medium">備註：{order.note}</p>}
               </div>
-
               <div className="mt-3 text-sm text-stone-700">
-                {order.items.map((item, i) => (
-                  <span key={i} className="mr-3">
-                    {item.name}×{item.quantity}
-                  </span>
-                ))}
+                {order.items.map((item, i) => (<span key={i} className="mr-3">{item.name}×{item.quantity}</span>))}
                 <span className="font-bold ml-1 text-stone-900">${order.totalPrice}</span>
               </div>
-
               <div className="mt-4 flex gap-2">
                 {next && (
-                  <button
-                    onClick={() => updateStatus(order.id, next)}
-                    className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95"
-                  >
+                  <button onClick={() => updateOrderStatusDirect(order.id, next)}
+                    className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95">
                     → {statusLabels[next]}
                   </button>
                 )}
                 {order.status !== "cancelled" && order.status !== "picked_up" && (
-                  <button
-                    onClick={() => updateStatus(order.id, "cancelled")}
-                    className="px-5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium transition-colors"
-                  >
-                    取消
-                  </button>
+                  <button onClick={() => updateOrderStatusDirect(order.id, "cancelled")}
+                    className="px-5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium transition-colors">取消</button>
                 )}
               </div>
             </div>

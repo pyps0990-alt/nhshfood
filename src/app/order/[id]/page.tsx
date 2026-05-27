@@ -1,9 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Order } from "@/types";
+import { useOrder } from "@/lib/hooks";
 
 const statusMap: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: "待確認", color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
@@ -17,20 +16,7 @@ const steps = ["pending", "confirmed", "ready", "picked_up"];
 
 export default function OrderStatusPage() {
   const { id } = useParams<{ id: string }>();
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    function fetchOrder() {
-      fetch(`/api/orders/${id}`)
-        .then((r) => r.json())
-        .then(setOrder)
-        .finally(() => setLoading(false));
-    }
-    fetchOrder();
-    const timer = setInterval(fetchOrder, 10000);
-    return () => clearInterval(timer);
-  }, [id]);
+  const { order, loading } = useOrder(id);
 
   if (loading) {
     return (
@@ -61,7 +47,6 @@ export default function OrderStatusPage() {
           </div>
         </div>
 
-        {/* Progress steps */}
         {order.status !== "cancelled" && (
           <div className="flex items-center justify-center gap-1 px-4">
             {steps.map((s, i) => (

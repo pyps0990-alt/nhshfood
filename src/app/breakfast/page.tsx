@@ -1,24 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { MenuCard } from "@/components/MenuCard";
 import { CartBar } from "@/components/CartBar";
-import type { MenuItem } from "@/types";
+import { useMenuItems } from "@/lib/hooks";
 
 export default function BreakfastPage() {
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const { items, loading } = useMenuItems("breakfast");
   const [category, setCategory] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/menu?department=breakfast")
-      .then((r) => r.json())
-      .then((data) => {
-        setItems(data);
-        setLoading(false);
-      });
-  }, []);
 
   const categories = ["all", ...new Set(items.map((i) => i.category))];
   const filtered =
@@ -27,9 +17,7 @@ export default function BreakfastPage() {
   return (
     <div className="flex-1 flex flex-col">
       <header className="sticky top-0 z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-5 py-4 flex items-center gap-3 shadow-md shadow-amber-200/30">
-        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">
-          ←
-        </Link>
+        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">←</Link>
         <div>
           <h1 className="text-lg font-bold tracking-tight">早餐部</h1>
           <p className="text-amber-100 text-xs">早上～下午供應</p>

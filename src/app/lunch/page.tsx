@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { MenuCard } from "@/components/MenuCard";
 import { CartBar } from "@/components/CartBar";
-import type { MenuItem } from "@/types";
+import { useMenuItems } from "@/lib/hooks";
 
 function isLunchTime() {
   const now = new Date();
@@ -13,23 +13,13 @@ function isLunchTime() {
 }
 
 export default function LunchPage() {
-  const [items, setItems] = useState<MenuItem[]>([]);
+  const { items, loading } = useMenuItems("lunch");
   const [category, setCategory] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(isLunchTime());
 
   useEffect(() => {
     const timer = setInterval(() => setOpen(isLunchTime()), 30000);
     return () => clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    fetch("/api/menu?department=lunch")
-      .then((r) => r.json())
-      .then((data) => {
-        setItems(data);
-        setLoading(false);
-      });
   }, []);
 
   const categories = ["all", ...new Set(items.map((i) => i.category))];
@@ -39,9 +29,7 @@ export default function LunchPage() {
   return (
     <div className="flex-1 flex flex-col">
       <header className="sticky top-0 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-4 flex items-center gap-3 shadow-md shadow-orange-200/30">
-        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">
-          ←
-        </Link>
+        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">←</Link>
         <div>
           <h1 className="text-lg font-bold tracking-tight">午餐部</h1>
           <p className="text-orange-100 text-xs">11:00 ~ 13:00</p>
