@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { createOrder, getOrders } from "@/lib/db";
 import { z } from "zod";
 
 const createOrderSchema = z.object({
@@ -12,7 +12,8 @@ const createOrderSchema = z.object({
   items: z
     .array(
       z.object({
-        menuItemId: z.number(),
+        menuItemId: z.string(),
+        name: z.string(),
         quantity: z.number().min(1),
         price: z.number(),
       })
@@ -30,43 +31,25 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
   const totalPrice = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
 
-  const order = await prisma.order.create({
-    data: {
-      studentId: data.studentId,
-      studentName: data.studentName ?? null,
-      className: data.className ?? null,
-      department: data.department,
-      note: data.note ?? null,
-      pickupTime: data.pickupTime ?? null,
-      totalPrice,
-      items: {
-        create: data.items.map((i) => ({
-          menuItemId: i.menuItemId,
-          quantity: i.quantity,
-          price: i.price,
-        })),
-      },
-    },
-    include: { items: { include: { menuItem: true } } },
+  const result = await createOrder({
+    studentId: data.studentId,
+    studentName: data.studentName ?? null,
+    className: data.className ?? null,
+    department: data.department,
+    note: data.note ?? null,
+    pickupTime: data.pickupTime ?? null,
+    totalPrice,
+    status: "pending",
+    items: data.items,
   });
 
-  return NextResponse.json(order, { status: 201 });
+  return NextResponse.json(result, { status: 201 });
 }
 
 export async function GET(req: NextRequest) {
-  const department = req.nextUrl.searchParams.get("department");
-  const status = req.nextUrl.searchParams.get("status");
+  const department = req.nextUrl.searchParams.get("department") || undefined;
+  const status = req.nextUrl.searchParams.get("status") || undefined;
 
-  const where: Record<string, unknown> = {};
-  if (department) where.department = department;
-  if (status) where.status = status;
-
-  const orders = await prisma.order.findMany({
-    where,
-    include: { items: { include: { menuItem: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
-
+  const orders = await getOrders(department, status);
   return NextResponse.json(orders);
 }

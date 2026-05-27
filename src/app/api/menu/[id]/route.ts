@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { updateMenuItem } from "@/lib/db";
 
 export async function PATCH(
   req: NextRequest,
@@ -8,10 +8,6 @@ export async function PATCH(
   const { id } = await params;
   const body = await req.json();
 
-  const item = await prisma.menuItem.update({
-    where: { id: Number(id) },
-    data: body,
-  });
-
-  return NextResponse.json(item);
+  await updateMenuItem(id, body);
+  return NextResponse.json({ id, ...body });
 }

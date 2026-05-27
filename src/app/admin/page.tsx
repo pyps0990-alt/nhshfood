@@ -2,39 +2,26 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-
-interface OrderSummary {
-  id: number;
-  studentId: string;
-  studentName: string | null;
-  className: string | null;
-  department: string;
-  status: string;
-  totalPrice: number;
-  note: string | null;
-  pickupTime: string | null;
-  createdAt: string;
-  items: { quantity: number; price: number; menuItem: { name: string } }[];
-}
+import type { Order } from "@/types";
 
 const statusFlow = ["pending", "confirmed", "ready", "picked_up"];
 const statusLabels: Record<string, string> = {
   pending: "待確認",
-  confirmed: "已確認",
+  confirmed: "準備中",
   ready: "可取餐",
   picked_up: "已取餐",
   cancelled: "已取消",
 };
 const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800",
-  confirmed: "bg-blue-100 text-blue-800",
-  ready: "bg-green-100 text-green-800",
-  picked_up: "bg-gray-100 text-gray-600",
-  cancelled: "bg-red-100 text-red-800",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  confirmed: "bg-blue-50 text-blue-700 border-blue-200",
+  ready: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  picked_up: "bg-stone-50 text-stone-500 border-stone-200",
+  cancelled: "bg-red-50 text-red-600 border-red-200",
 };
 
 export default function AdminPage() {
-  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [dept, setDept] = useState<string>("breakfast");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -70,7 +57,7 @@ export default function AdminPage() {
     if (filterStatus !== "all") params.set("status", filterStatus);
     fetch(`/api/orders?${params}`)
       .then((r) => r.json())
-      .then((data: OrderSummary[]) => {
+      .then((data: Order[]) => {
         const pendingCount = data.filter((o) => o.status === "pending").length;
         if (prevCountRef.current > 0 && pendingCount > prevCountRef.current) {
           playNotification();
@@ -86,7 +73,7 @@ export default function AdminPage() {
     return () => clearInterval(timer);
   }, [fetchOrders]);
 
-  async function updateStatus(orderId: number, status: string) {
+  async function updateStatus(orderId: string, status: string) {
     await fetch(`/api/orders/${orderId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -107,37 +94,41 @@ export default function AdminPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="bg-gray-900 text-white px-4 py-3 flex items-center gap-4">
-        <Link href="/" className="text-xl">←</Link>
-        <h1 className="text-lg font-bold">管理面板</h1>
-        <button
-          onClick={() => setSoundEnabled(!soundEnabled)}
-          className="ml-auto text-sm bg-gray-700 px-3 py-1 rounded-lg"
-          title={soundEnabled ? "關閉通知音效" : "開啟通知音效"}
-        >
-          {soundEnabled ? "🔔" : "🔕"}
-        </button>
-        <Link href="/admin/menu" className="text-sm bg-gray-700 px-3 py-1 rounded-lg">
-          菜單管理
-        </Link>
-        <button
-          onClick={async () => {
-            await fetch("/api/auth", { method: "DELETE" });
-            window.location.href = "/admin/login";
-          }}
-          className="text-sm bg-gray-700 px-3 py-1 rounded-lg"
-        >
-          登出
-        </button>
+      <header className="bg-stone-900 text-white px-5 py-4 flex items-center gap-4">
+        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">←</Link>
+        <h1 className="text-lg font-bold tracking-tight">管理面板</h1>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className="text-sm bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl transition-colors"
+          >
+            {soundEnabled ? "🔔" : "🔕"}
+          </button>
+          <Link href="/pos" className="text-sm bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-xl font-semibold transition-colors">
+            POS
+          </Link>
+          <Link href="/admin/menu" className="text-sm bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-xl transition-colors">
+            菜單
+          </Link>
+          <button
+            onClick={async () => {
+              await fetch("/api/auth", { method: "DELETE" });
+              window.location.href = "/admin/login";
+            }}
+            className="text-sm bg-stone-800 hover:bg-stone-700 px-4 py-2 rounded-xl transition-colors"
+          >
+            登出
+          </button>
+        </div>
       </header>
 
-      <div className="flex gap-2 px-4 py-3 border-b border-gray-200">
+      <div className="flex gap-2 px-5 py-4 border-b border-stone-100">
         {["breakfast", "lunch"].map((d) => (
           <button
             key={d}
             onClick={() => setDept(d)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
-              dept === d ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
+              dept === d ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
             }`}
           >
             {d === "breakfast" ? "早餐部" : "午餐部"}
@@ -145,22 +136,22 @@ export default function AdminPage() {
         ))}
       </div>
 
-      <div className="px-4 py-3 flex gap-4 text-sm">
-        <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-lg">
+      <div className="px-5 py-4 flex gap-4 text-sm">
+        <span className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl font-semibold border border-blue-100">
           今日 {todayOrders.length} 筆
         </span>
-        <span className="bg-green-50 text-green-700 px-3 py-1 rounded-lg">
+        <span className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl font-semibold border border-emerald-100">
           營業額 ${todayRevenue}
         </span>
       </div>
 
-      <div className="flex gap-2 px-4 py-2 overflow-x-auto">
+      <div className="flex gap-2 px-5 py-2 overflow-x-auto">
         {["all", ...statusFlow, "cancelled"].map((s) => (
           <button
             key={s}
             onClick={() => setFilterStatus(s)}
-            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
-              filterStatus === s ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-600"
+            className={`px-4 py-1.5 rounded-xl text-xs whitespace-nowrap font-medium transition-all ${
+              filterStatus === s ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-500 hover:bg-stone-200"
             }`}
           >
             {s === "all" ? "全部" : statusLabels[s]}
@@ -168,46 +159,46 @@ export default function AdminPage() {
         ))}
       </div>
 
-      <main className="flex-1 px-4 py-3 space-y-3 pb-8">
+      <main className="flex-1 px-5 py-4 space-y-3 pb-8">
         {orders.length === 0 && (
-          <p className="text-center text-gray-400 mt-10">沒有訂單</p>
+          <p className="text-center text-stone-400 mt-10">沒有訂單</p>
         )}
         {orders.map((order) => {
           const next = nextStatus(order.status);
           return (
-            <div key={order.id} className="bg-white rounded-xl p-4 border border-gray-100">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <span className="font-bold text-lg">#{order.id}</span>
-                  <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${statusColors[order.status]}`}>
+            <div key={order.id} className="card-premium p-5 animate-fade-in">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <span className="font-black text-xl text-stone-900">#{order.orderNumber}</span>
+                  <span className={`text-xs px-3 py-1 rounded-full font-semibold border ${statusColors[order.status]}`}>
                     {statusLabels[order.status]}
                   </span>
                 </div>
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-stone-400">
                   {new Date(order.createdAt).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
 
-              <div className="text-sm text-gray-600 space-y-0.5">
-                <p>{order.className} {order.studentId} {order.studentName}</p>
+              <div className="text-sm text-stone-600 space-y-0.5">
+                <p className="font-medium">{order.className} {order.studentId} {order.studentName}</p>
                 {order.pickupTime && <p>取餐：{order.pickupTime}</p>}
-                {order.note && <p className="text-orange-600">備註：{order.note}</p>}
+                {order.note && <p className="text-orange-600 font-medium">備註：{order.note}</p>}
               </div>
 
-              <div className="mt-2 text-sm">
+              <div className="mt-3 text-sm text-stone-700">
                 {order.items.map((item, i) => (
-                  <span key={i} className="mr-2">
-                    {item.menuItem.name}×{item.quantity}
+                  <span key={i} className="mr-3">
+                    {item.name}×{item.quantity}
                   </span>
                 ))}
-                <span className="font-bold ml-2">${order.totalPrice}</span>
+                <span className="font-bold ml-1 text-stone-900">${order.totalPrice}</span>
               </div>
 
-              <div className="mt-3 flex gap-2">
+              <div className="mt-4 flex gap-2">
                 {next && (
                   <button
                     onClick={() => updateStatus(order.id, next)}
-                    className="px-4 py-1.5 bg-blue-500 text-white rounded-lg text-sm font-medium"
+                    className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95"
                   >
                     → {statusLabels[next]}
                   </button>
@@ -215,7 +206,7 @@ export default function AdminPage() {
                 {order.status !== "cancelled" && order.status !== "picked_up" && (
                   <button
                     onClick={() => updateStatus(order.id, "cancelled")}
-                    className="px-4 py-1.5 bg-red-50 text-red-600 rounded-lg text-sm"
+                    className="px-5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium transition-colors"
                   >
                     取消
                   </button>

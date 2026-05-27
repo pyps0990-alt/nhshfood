@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createToken } from "@/lib/auth";
+import { db, collection, query, where, getDocs } from "@/lib/firebase";
 import { createHash } from "crypto";
 
 function hashPassword(password: string) {
@@ -14,9 +14,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "請輸入帳號密碼" }, { status: 400 });
   }
 
-  const admin = await prisma.admin.findUnique({ where: { username } });
+  const q = query(collection(db, "admins"), where("username", "==", username));
+  const snap = await getDocs(q);
 
-  if (!admin || admin.passwordHash !== hashPassword(password)) {
+  if (snap.empty) {
+    return NextResponse.json({ error: "帳號或密碼錯誤" }, { status: 401 });
+  }
+
+  const admin = snap.docs[0].data();
+  if (admin.passwordHash !== hashPassword(password)) {
     return NextResponse.json({ error: "帳號或密碼錯誤" }, { status: 401 });
   }
 
@@ -27,7 +33,7 @@ export async function POST(req: NextRequest) {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 60 * 60 * 8, // 8 hours
+    maxAge: 60 * 60 * 8,
     path: "/",
   });
 

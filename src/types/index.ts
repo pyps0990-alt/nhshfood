@@ -1,5 +1,5 @@
 export interface MenuItem {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   price: number;
@@ -7,8 +7,6 @@ export interface MenuItem {
   department: string;
   imageUrl: string | null;
   available: boolean;
-  availableFrom: string | null;
-  availableTo: string | null;
 }
 
 export interface CartItem {
@@ -17,7 +15,8 @@ export interface CartItem {
 }
 
 export interface Order {
-  id: number;
+  id: string;
+  orderNumber: number;
   studentId: string;
   studentName: string | null;
   className: string | null;
@@ -28,9 +27,9 @@ export interface Order {
   pickupTime: string | null;
   createdAt: string;
   items: {
-    id: number;
+    menuItemId: string;
+    name: string;
     quantity: number;
     price: number;
-    menuItem: MenuItem;
   }[];
 }

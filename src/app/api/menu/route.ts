@@ -1,37 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getMenuItems, addMenuItem } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
-  const department = req.nextUrl.searchParams.get("department");
-
+  const department = req.nextUrl.searchParams.get("department") || undefined;
   const includeAll = req.nextUrl.searchParams.get("all") === "true";
-  const where: Record<string, unknown> = {};
-  if (!includeAll) where.available = true;
-  if (department) where.department = department;
 
-  const items = await prisma.menuItem.findMany({
-    where,
-    orderBy: { category: "asc" },
-  });
-
+  const items = await getMenuItems(department, includeAll);
   return NextResponse.json(items);
 }
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  const item = await prisma.menuItem.create({
-    data: {
-      name: body.name,
-      price: body.price,
-      category: body.category,
-      department: body.department,
-      description: body.description ?? null,
-      imageUrl: body.imageUrl ?? null,
-      availableFrom: body.availableFrom ?? null,
-      availableTo: body.availableTo ?? null,
-    },
+  const id = await addMenuItem({
+    name: body.name,
+    price: body.price,
+    category: body.category,
+    department: body.department,
+    description: body.description ?? null,
+    imageUrl: body.imageUrl ?? null,
+    available: true,
   });
 
-  return NextResponse.json(item, { status: 201 });
+  return NextResponse.json({ id, ...body }, { status: 201 });
 }

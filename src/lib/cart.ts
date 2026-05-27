@@ -5,8 +5,8 @@ interface CartState {
   department: string | null;
   items: CartItem[];
   add: (item: MenuItem, dept: string) => void;
-  remove: (menuItemId: number) => void;
-  updateQty: (menuItemId: number, qty: number) => void;
+  remove: (menuItemId: string) => void;
+  updateQty: (menuItemId: string, qty: number) => void;
   clear: () => void;
   total: () => number;
   count: () => number;
