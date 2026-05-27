@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { OrderLookup } from "@/components/OrderLookup";
 
 export default function Home() {
   return (
-    <main className="flex-1 flex flex-col items-center justify-center px-4">
+    <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-900 mb-2">內湖高中熱食部</h1>
       <p className="text-gray-500 mb-10">線上訂餐系統</p>
 
@@ -24,6 +25,10 @@ export default function Home() {
           <span className="text-xl font-semibold text-orange-900">午餐部</span>
           <span className="text-sm text-orange-600">11:00 ~ 13:00</span>
         </Link>
+      </div>
+
+      <div className="mt-10 w-full max-w-lg">
+        <OrderLookup />
       </div>
     </main>
   );
