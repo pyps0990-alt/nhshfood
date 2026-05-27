@@ -16,7 +16,7 @@ export default function AdminMenuPage() {
   const [description, setDescription] = useState("");
 
   function fetchItems() {
-    fetch(`/api/menu?department=${dept}`)
+    fetch(`/api/menu?department=${dept}&all=true`)
       .then((r) => r.json())
       .then(setItems);
   }

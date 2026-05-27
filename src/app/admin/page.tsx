@@ -79,6 +79,15 @@ export default function AdminPage() {
         <Link href="/admin/menu" className="ml-auto text-sm bg-gray-700 px-3 py-1 rounded-lg">
           菜單管理
         </Link>
+        <button
+          onClick={async () => {
+            await fetch("/api/auth", { method: "DELETE" });
+            window.location.href = "/admin/login";
+          }}
+          className="text-sm bg-gray-700 px-3 py-1 rounded-lg"
+        >
+          登出
+        </button>
       </header>
 
       <div className="flex gap-2 px-4 py-3 border-b border-gray-200">

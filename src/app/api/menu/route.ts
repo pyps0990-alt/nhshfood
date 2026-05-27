@@ -4,7 +4,9 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   const department = req.nextUrl.searchParams.get("department");
 
-  const where: Record<string, unknown> = { available: true };
+  const includeAll = req.nextUrl.searchParams.get("all") === "true";
+  const where: Record<string, unknown> = {};
+  if (!includeAll) where.available = true;
   if (department) where.department = department;
 
   const items = await prisma.menuItem.findMany({

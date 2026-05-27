@@ -3,20 +3,20 @@
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
+import { getDeptConfig } from "@/lib/department";
 
 export default function CartPage() {
   const { department } = useParams<{ department: string }>();
   const router = useRouter();
   const { items, updateQty, remove, total, clear, department: cartDept } = useCart();
-
-  const color = department === "breakfast" ? "amber" : "orange";
+  const cfg = getDeptConfig(department);
   const totalPrice = total();
 
   if (cartDept !== department || items.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         <p className="text-gray-400 mb-4">購物車是空的</p>
-        <Link href={`/${department}`} className={`text-${color}-500 font-medium`}>
+        <Link href={`/${department}`} className={`${cfg.btnText} font-medium`}>
           回去看菜單
         </Link>
       </div>
@@ -25,7 +25,7 @@ export default function CartPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className={`sticky top-0 z-10 bg-${color}-500 text-white px-4 py-3 flex items-center gap-3`}>
+      <header className={`sticky top-0 z-10 ${cfg.headerBg} text-white px-4 py-3 flex items-center gap-3`}>
         <Link href={`/${department}`} className="text-xl">←</Link>
         <h1 className="text-lg font-bold">購物車</h1>
         <button onClick={() => { clear(); router.push(`/${department}`); }} className="ml-auto text-sm opacity-80">
@@ -71,7 +71,7 @@ export default function CartPage() {
         </div>
         <Link
           href={`/${department}/order`}
-          className={`block text-center bg-${color}-500 text-white rounded-xl px-5 py-3 font-medium`}
+          className={`block text-center ${cfg.btnBg} text-white rounded-xl px-5 py-3 font-medium`}
         >
           前往結帳
         </Link>

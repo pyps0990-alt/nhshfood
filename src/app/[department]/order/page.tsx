@@ -4,11 +4,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
+import { getDeptConfig } from "@/lib/department";
 
 export default function OrderPage() {
   const { department } = useParams<{ department: string }>();
   const router = useRouter();
   const { items, total, clear, department: cartDept } = useCart();
+  const cfg = getDeptConfig(department);
   const [studentId, setStudentId] = useState("");
   const [studentName, setStudentName] = useState("");
   const [className, setClassName] = useState("");
@@ -17,14 +19,13 @@ export default function OrderPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  const color = department === "breakfast" ? "amber" : "orange";
   const totalPrice = total();
 
   if (cartDept !== department || items.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         <p className="text-gray-400 mb-4">購物車是空的</p>
-        <Link href={`/${department}`} className={`text-${color}-500 font-medium`}>
+        <Link href={`/${department}`} className={`${cfg.btnText} font-medium`}>
           回去看菜單
         </Link>
       </div>
@@ -76,7 +77,7 @@ export default function OrderPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className={`sticky top-0 z-10 bg-${color}-500 text-white px-4 py-3 flex items-center gap-3`}>
+      <header className={`sticky top-0 z-10 ${cfg.headerBg} text-white px-4 py-3 flex items-center gap-3`}>
         <Link href={`/${department}/cart`} className="text-xl">←</Link>
         <h1 className="text-lg font-bold">填寫訂單資料</h1>
       </header>
@@ -89,7 +90,7 @@ export default function OrderPage() {
             value={studentId}
             onChange={(e) => setStudentId(e.target.value)}
             placeholder="例：15"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${cfg.ringColor}`}
           />
         </div>
 
@@ -100,7 +101,7 @@ export default function OrderPage() {
             value={studentName}
             onChange={(e) => setStudentName(e.target.value)}
             placeholder="選填"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${cfg.ringColor}`}
           />
         </div>
 
@@ -111,7 +112,7 @@ export default function OrderPage() {
             value={className}
             onChange={(e) => setClassName(e.target.value)}
             placeholder="例：高二忠班"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${cfg.ringColor}`}
           />
         </div>
 
@@ -125,7 +126,7 @@ export default function OrderPage() {
                 onClick={() => setPickupTime(t)}
                 className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
                   pickupTime === t
-                    ? `bg-${color}-500 text-white border-${color}-500`
+                    ? cfg.selectedBtn
                     : "border-gray-300 text-gray-600 hover:bg-gray-50"
                 }`}
               >
@@ -142,7 +143,7 @@ export default function OrderPage() {
             onChange={(e) => setNote(e.target.value)}
             placeholder="例：不要辣、加大飯量"
             rows={2}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300"
+            className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${cfg.ringColor}`}
           />
         </div>
 
@@ -166,7 +167,7 @@ export default function OrderPage() {
           <button
             type="submit"
             disabled={submitting}
-            className={`w-full bg-${color}-500 text-white rounded-xl px-5 py-3 font-medium disabled:opacity-50`}
+            className={`w-full ${cfg.btnBg} text-white rounded-xl px-5 py-3 font-medium disabled:opacity-50`}
           >
             {submitting ? "送出中..." : `送出訂單（$${totalPrice}）`}
           </button>

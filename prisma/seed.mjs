@@ -1,6 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import { createHash } from 'crypto';
 
 const prisma = new PrismaClient();
+
+function hashPassword(pw) {
+  return createHash('sha256').update(pw).digest('hex');
+}
 
 const items = [
   { name: "蛋餅", price: 30, category: "主食", department: "breakfast", description: "原味蛋餅" },
@@ -28,9 +33,22 @@ const items = [
   { name: "味噌湯", price: 20, category: "湯品", department: "lunch" },
 ];
 
+await prisma.orderItem.deleteMany();
+await prisma.order.deleteMany();
 await prisma.menuItem.deleteMany();
 for (const item of items) {
   await prisma.menuItem.create({ data: item });
 }
 console.log(`Seeded ${items.length} menu items`);
+
+// Create default admin account
+await prisma.admin.deleteMany();
+await prisma.admin.create({
+  data: {
+    username: 'admin',
+    passwordHash: hashPassword('admin123'),
+  },
+});
+console.log('Created admin account (admin / admin123)');
+
 await prisma.$disconnect();
