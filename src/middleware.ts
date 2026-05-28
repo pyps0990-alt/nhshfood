@@ -16,7 +16,10 @@ export async function middleware(req: NextRequest) {
     await jwtVerify(token, SECRET);
     return NextResponse.next();
   } catch {
-    return NextResponse.redirect(new URL("/admin/login", req.url));
+    // Clear invalid token
+    const res = NextResponse.redirect(new URL("/admin/login", req.url));
+    res.cookies.set("admin_token", "", { maxAge: 0, path: "/" });
+    return res;
   }
 }
 

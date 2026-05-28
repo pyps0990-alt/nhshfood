@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import Link from "next/link";
-import { useAllMenuItems, addMenuItemDirect, updateMenuItemDirect } from "@/lib/hooks";
+import { useAllMenuItems, addMenuItemSecure, updateMenuItemSecure } from "@/lib/hooks";
 import type { MenuItem } from "@/types";
 
 export default function AdminMenuPage() {
@@ -50,16 +50,16 @@ export default function AdminMenuPage() {
     };
 
     if (editing) {
-      await updateMenuItemDirect(editing.id, payload);
+      await updateMenuItemSecure(editing.id, payload);
     } else {
-      await addMenuItemDirect(payload);
+      await addMenuItemSecure(payload);
     }
 
     resetForm();
   }
 
   async function toggleAvailable(item: MenuItem) {
-    await updateMenuItemDirect(item.id, { available: !item.available });
+    await updateMenuItemSecure(item.id, { available: !item.available });
   }
 
   const inputClass = "w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-300 focus:border-transparent";

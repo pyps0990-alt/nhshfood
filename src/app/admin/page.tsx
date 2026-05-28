@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useOrders, updateOrderStatusDirect } from "@/lib/hooks";
+import { useOrders, updateOrderStatusSecure } from "@/lib/hooks";
 
 const statusFlow = ["pending", "confirmed", "ready", "picked_up"];
 const statusLabels: Record<string, string> = {
@@ -137,13 +137,13 @@ export default function AdminPage() {
               </div>
               <div className="mt-4 flex gap-2">
                 {next && (
-                  <button onClick={() => updateOrderStatusDirect(order.id, next)}
+                  <button onClick={() => updateOrderStatusSecure(order.id, next)}
                     className="px-5 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-all active:scale-95">
                     → {statusLabels[next]}
                   </button>
                 )}
                 {order.status !== "cancelled" && order.status !== "picked_up" && (
-                  <button onClick={() => updateOrderStatusDirect(order.id, "cancelled")}
+                  <button onClick={() => updateOrderStatusSecure(order.id, "cancelled")}
                     className="px-5 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-xl text-sm font-medium transition-colors">取消</button>
                 )}
               </div>

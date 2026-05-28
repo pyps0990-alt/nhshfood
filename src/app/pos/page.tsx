@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useMenuItems, useOrders, createOrderDirect, updateOrderStatusDirect } from "@/lib/hooks";
+import { useMenuItems, useOrders, createOrderSecure, updateOrderStatusSecure } from "@/lib/hooks";
 import type { MenuItem } from "@/types";
 
 const statusLabels: Record<string, string> = {
@@ -66,7 +66,7 @@ export default function POSPage() {
 
   async function submitOrder() {
     if (cart.length === 0) return;
-    await createOrderDirect({
+    await createOrderSecure({
       studentId: "POS",
       studentName: "現場點餐",
       className: null,
@@ -202,7 +202,7 @@ export default function POSPage() {
                   </div>
                   <div className="flex gap-2">
                     {next && (
-                      <button onClick={() => updateOrderStatusDirect(order.id, next)}
+                      <button onClick={() => updateOrderStatusSecure(order.id, next)}
                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
                           order.status === "pending" ? "bg-blue-500 hover:bg-blue-600"
                           : order.status === "confirmed" ? "bg-emerald-500 hover:bg-emerald-600"
@@ -212,7 +212,7 @@ export default function POSPage() {
                       </button>
                     )}
                     {order.status !== "cancelled" && (
-                      <button onClick={() => updateOrderStatusDirect(order.id, "cancelled")}
+                      <button onClick={() => updateOrderStatusSecure(order.id, "cancelled")}
                         className="px-4 py-2 rounded-xl text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all">取消</button>
                     )}
                   </div>

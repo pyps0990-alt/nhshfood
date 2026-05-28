@@ -1,23 +1,17 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   db,
   collection,
   doc,
   query,
   where,
-  orderBy,
   onSnapshot,
-  getDoc,
-  addDoc,
-  updateDoc,
-  Timestamp,
-  getDocs,
 } from "./firebase";
 import type { MenuItem, Order } from "@/types";
 
-// ==================== Menu (realtime + cached) ====================
+// ==================== Menu (realtime client-side reads, cached) ====================
 const menuCache = new Map<string, MenuItem[]>();
 
 export function useMenuItems(department: string) {
@@ -29,7 +23,6 @@ export function useMenuItems(department: string) {
       collection(db, "menuItems"),
       where("department", "==", department)
     );
-
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as MenuItem))
@@ -39,7 +32,6 @@ export function useMenuItems(department: string) {
       setItems(data);
       setLoading(false);
     });
-
     return unsub;
   }, [department]);
 
@@ -55,7 +47,6 @@ export function useAllMenuItems(department: string) {
       collection(db, "menuItems"),
       where("department", "==", department)
     );
-
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs
         .map((d) => ({ id: d.id, ...d.data() } as MenuItem))
@@ -63,14 +54,13 @@ export function useAllMenuItems(department: string) {
       setItems(data);
       setLoading(false);
     });
-
     return unsub;
   }, [department]);
 
   return { items, loading };
 }
 
-// ==================== Orders (realtime) ====================
+// ==================== Orders (realtime client-side reads) ====================
 export function useOrders(department: string, filterStatus?: string) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,7 +70,6 @@ export function useOrders(department: string, filterStatus?: string) {
       collection(db, "orders"),
       where("department", "==", department)
     );
-
     const unsub = onSnapshot(q, (snap) => {
       let data = snap.docs.map((d) => {
         const raw = d.data();
@@ -90,16 +79,13 @@ export function useOrders(department: string, filterStatus?: string) {
           createdAt: raw.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
         } as Order;
       });
-
       if (filterStatus && filterStatus !== "all") {
         data = data.filter((o) => o.status === filterStatus);
       }
-
       data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       setOrders(data);
       setLoading(false);
     });
-
     return unsub;
   }, [department, filterStatus]);
 
@@ -112,7 +98,6 @@ export function useOrder(id: string) {
 
   useEffect(() => {
     if (!id) return;
-
     const unsub = onSnapshot(doc(db, "orders", id), (snap) => {
       if (!snap.exists()) {
         setOrder(null);
@@ -126,15 +111,15 @@ export function useOrder(id: string) {
       }
       setLoading(false);
     });
-
     return unsub;
   }, [id]);
 
   return { order, loading };
 }
 
-// ==================== Mutations (direct Firestore writes) ====================
-export async function createOrderDirect(data: {
+// ==================== Secure writes via API routes ====================
+
+export async function createOrderSecure(data: {
   studentId: string;
   studentName: string | null;
   className: string | null;
@@ -143,36 +128,32 @@ export async function createOrderDirect(data: {
   pickupTime: string | null;
   items: { menuItemId: string; name: string; quantity: number; price: number }[];
 }) {
-  const totalPrice = data.items.reduce((s, i) => s + i.price * i.quantity, 0);
-
-  // Get today's order count for order number
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const todayStart = Timestamp.fromDate(today);
-
-  const q = query(
-    collection(db, "orders"),
-    where("createdAt", ">=", todayStart)
-  );
-  const snap = await getDocs(q);
-  const orderNumber = snap.size + 1;
-
-  const ref = await addDoc(collection(db, "orders"), {
-    ...data,
-    totalPrice,
-    status: "pending",
-    orderNumber,
-    createdAt: Timestamp.now(),
+  const res = await fetch("/api/orders", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
-
-  return { id: ref.id, orderNumber };
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "送出失敗" }));
+    throw new Error(err.error || "送出失敗");
+  }
+  return res.json();
 }
 
-export async function updateOrderStatusDirect(id: string, status: string) {
-  await updateDoc(doc(db, "orders", id), { status });
+export async function updateOrderStatusSecure(id: string, status: string) {
+  const res = await fetch(`/api/orders/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "更新失敗" }));
+    throw new Error(err.error || "更新失敗");
+  }
+  return res.json();
 }
 
-export async function addMenuItemDirect(data: {
+export async function addMenuItemSecure(data: {
   name: string;
   price: number;
   category: string;
@@ -180,14 +161,21 @@ export async function addMenuItemDirect(data: {
   description: string | null;
   imageUrl: string | null;
 }) {
-  const ref = await addDoc(collection(db, "menuItems"), {
-    ...data,
-    available: true,
-    createdAt: Timestamp.now(),
+  const res = await fetch("/api/menu", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
   });
-  return ref.id;
+  if (!res.ok) throw new Error("新增失敗");
+  return res.json();
 }
 
-export async function updateMenuItemDirect(id: string, data: Record<string, unknown>) {
-  await updateDoc(doc(db, "menuItems", id), data);
+export async function updateMenuItemSecure(id: string, data: Record<string, unknown>) {
+  const res = await fetch(`/api/menu/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error("更新失敗");
+  return res.json();
 }

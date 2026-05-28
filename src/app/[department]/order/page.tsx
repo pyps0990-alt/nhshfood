@@ -5,7 +5,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
 import { getDeptConfig } from "@/lib/department";
-import { createOrderDirect } from "@/lib/hooks";
+import { createOrderSecure } from "@/lib/hooks";
 
 export default function OrderPage() {
   const { department } = useParams<{ department: string }>();
@@ -48,7 +48,7 @@ export default function OrderPage() {
     setError("");
 
     try {
-      const order = await createOrderDirect({
+      const order = await createOrderSecure({
         studentId: studentId.trim(),
         studentName: studentName.trim() || null,
         className: className.trim() || null,
@@ -65,8 +65,8 @@ export default function OrderPage() {
 
       clear();
       router.push(`/order/${order.id}`);
-    } catch {
-      setError("訂單送出失敗，請稍後再試");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "訂單送出失敗，請稍後再試");
       setSubmitting(false);
     }
   }

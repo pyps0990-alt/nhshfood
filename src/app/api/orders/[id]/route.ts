@@ -1,33 +1,64 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getOrder, updateOrderStatus } from "@/lib/db";
+import { adminDb } from "@/lib/firebase-admin";
+import { getSession } from "@/lib/auth";
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const order = await getOrder(id);
+  try {
+    const { id } = await params;
 
-  if (!order) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // Validate ID format (prevent injection)
+    if (!/^[a-zA-Z0-9]{10,30}$/.test(id)) {
+      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+    }
+
+    const snap = await adminDb.collection("orders").doc(id).get();
+    if (!snap.exists) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
+
+    const data = snap.data()!;
+    return NextResponse.json({
+      id: snap.id,
+      ...data,
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("GET /api/orders/[id] error:", err);
+    return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
   }
-
-  return NextResponse.json(order);
 }
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params;
-  const body = await req.json();
-  const { status } = body;
+  try {
+    // Only admins can update order status
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "未授權" }, { status: 401 });
+    }
 
-  const validStatuses = ["pending", "confirmed", "ready", "picked_up", "cancelled"];
-  if (!validStatuses.includes(status)) {
-    return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    const { id } = await params;
+    if (!/^[a-zA-Z0-9]{10,30}$/.test(id)) {
+      return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+    }
+
+    const body = await req.json();
+    const { status } = body;
+
+    const validStatuses = ["pending", "confirmed", "ready", "picked_up", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    await adminDb.collection("orders").doc(id).update({ status });
+    return NextResponse.json({ id, status });
+  } catch (err) {
+    console.error("PATCH /api/orders/[id] error:", err);
+    return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
   }
-
-  await updateOrderStatus(id, status);
-  return NextResponse.json({ id, status });
 }
