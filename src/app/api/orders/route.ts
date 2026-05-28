@@ -75,14 +75,21 @@ export async function POST(req: NextRequest) {
       totalPrice += menuData.price * item.quantity;
     }
 
-    // Generate order number
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Generate order number: YYYYMMDDSSSS (resets daily)
+    const now = new Date();
+    const yyyy = String(now.getFullYear());
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    const datePrefix = `${yyyy}${mm}${dd}`;
+
+    const todayStart = new Date(now);
+    todayStart.setHours(0, 0, 0, 0);
     const ordersRef = adminDb.collection("orders");
     const todaySnap = await ordersRef
-      .where("createdAt", ">=", today)
+      .where("createdAt", ">=", todayStart)
       .get();
-    const orderNumber = todaySnap.size + 1;
+    const seq = String(todaySnap.size + 1).padStart(4, "0");
+    const orderNumber = `${datePrefix}${seq}`;
 
     const docRef = await ordersRef.add({
       studentId: sanitize(data.studentId)!,

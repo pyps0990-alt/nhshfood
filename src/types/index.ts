@@ -16,7 +16,7 @@ export interface CartItem {
 
 export interface Order {
   id: string;
-  orderNumber: number;
+  orderNumber: string;
   studentId: string;
   studentName: string | null;
   className: string | null;

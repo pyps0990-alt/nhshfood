@@ -68,7 +68,7 @@ export interface OrderItemData {
 
 export interface OrderData {
   id: string;
-  orderNumber: number;
+  orderNumber: string;
   studentId: string;
   studentName: string | null;
   className: string | null;
