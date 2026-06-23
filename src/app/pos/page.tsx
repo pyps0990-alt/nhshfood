@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useMenuItems, useOrders, createOrderSecure, updateOrderStatusSecure } from "@/lib/hooks";
 import type { MenuItem } from "@/types";
 
@@ -12,6 +13,7 @@ const statusColors: Record<string, string> = {
 };
 
 interface CartEntry { item: MenuItem; qty: number; }
+interface OrderNotification { id: string; orderNumber: string; itemCount: number; timestamp: number; }
 
 export default function POSPage() {
   const [dept, setDept] = useState<"breakfast" | "lunch">("breakfast");
@@ -21,31 +23,62 @@ export default function POSPage() {
   const [view, setView] = useState<"order" | "queue">("order");
   const [soundOn, setSoundOn] = useState(true);
   const prevPendingRef = useRef(0);
+  const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  const [notifications, setNotifications] = useState<OrderNotification[]>([]);
 
   const playBeep = useCallback(() => {
     try {
       const ctx = new AudioContext();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880; gain.gain.value = 0.4;
-      osc.start(); osc.stop(ctx.currentTime + 0.12);
-      setTimeout(() => {
-        const o2 = ctx.createOscillator(); const g2 = ctx.createGain();
-        o2.connect(g2); g2.connect(ctx.destination);
-        o2.frequency.value = 1100; g2.gain.value = 0.4;
-        o2.start(); o2.stop(ctx.currentTime + 0.15);
-      }, 150);
+      const playTone = (freq: number, delay: number, duration: number) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; gain.gain.value = 0.6;
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + duration);
+      };
+      playTone(880, 0, 0.12);
+      playTone(1100, 0.18, 0.12);
+      playTone(1320, 0.36, 0.18);
     } catch {}
   }, []);
 
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
   useEffect(() => {
-    const pending = orders.filter((o) => o.status === "pending").length;
-    if (soundOn && prevPendingRef.current > 0 && pending > prevPendingRef.current) {
-      playBeep();
+    const pending = orders.filter((o) => o.status === "pending");
+    const pendingCount = pending.length;
+    const currentIds = new Set(pending.map((o) => o.id));
+
+    if (prevPendingRef.current > 0 && pendingCount > prevPendingRef.current) {
+      // Find new orders
+      const newOrders = pending.filter((o) => !prevOrderIdsRef.current.has(o.id));
+      if (newOrders.length > 0) {
+        if (soundOn) playBeep();
+        const newNotifs: OrderNotification[] = newOrders.map((o) => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          itemCount: o.items.length,
+          timestamp: Date.now(),
+        }));
+        setNotifications((prev) => [...prev, ...newNotifs]);
+      }
     }
-    prevPendingRef.current = pending;
+    prevPendingRef.current = pendingCount;
+    prevOrderIdsRef.current = currentIds;
   }, [orders, soundOn, playBeep]);
+
+  // Auto-dismiss notifications after 8 seconds
+  useEffect(() => {
+    if (notifications.length === 0) return;
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setNotifications((prev) => prev.filter((n) => now - n.timestamp < 8000));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [notifications.length]);
 
   useEffect(() => { setCart([]); }, [dept]);
 
@@ -72,6 +105,7 @@ export default function POSPage() {
       className: null,
       department: dept,
       note: null,
+      pickupDate: null,
       pickupTime: null,
       items: cart.map((c) => ({
         menuItemId: c.item.id, name: c.item.name, quantity: c.qty, price: c.item.price,
@@ -86,9 +120,42 @@ export default function POSPage() {
 
   return (
     <div className="h-screen flex flex-col bg-stone-950 text-white overflow-hidden">
+      {/* Notification popups */}
+      <div className="fixed top-4 right-4 z-50 space-y-2" style={{ maxWidth: 360 }}>
+        {notifications.map((n) => (
+          <div key={n.id}
+            className="bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-xl p-4 shadow-2xl shadow-red-500/30 flex items-center gap-3 animate-slide-in-right"
+            style={{ animation: "slideInRight 0.3s ease-out" }}
+          >
+            <div className="flex-1">
+              <p className="font-black text-xl">新訂單 #{n.orderNumber}</p>
+              <p className="text-sm text-white/80">{n.itemCount} 項品項</p>
+            </div>
+            <button onClick={() => dismissNotification(n.id)} className="text-white/70 hover:text-white text-xl font-bold px-2">
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(120%); opacity: 0; }
+          to { transform: translateX(0); opacity: 1; }
+        }
+      `}</style>
+
       <header className="flex items-center justify-between px-5 py-3 bg-stone-900 border-b border-stone-800 shrink-0">
         <div className="flex items-center gap-4">
+          <Link href="/admin" className="text-stone-400 hover:text-white transition-colors p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </Link>
           <h1 className="text-lg font-bold tracking-tight">POS 點餐機</h1>
+          {pendingCount > 0 && (
+            <span className="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
+              {pendingCount} 筆待處理
+            </span>
+          )}
           <div className="flex bg-stone-800 rounded-xl p-0.5">
             {(["breakfast", "lunch"] as const).map((d) => (
               <button key={d} onClick={() => setDept(d)}
@@ -99,8 +166,15 @@ export default function POSPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={() => setSoundOn(!soundOn)} className="text-sm text-stone-400 hover:text-white transition-colors">
-            {soundOn ? "🔔" : "🔕"}
+          <Link href="/receiver" className="text-sm text-stone-400 hover:text-white transition-colors px-3 py-1.5 bg-stone-800 rounded-lg">
+            接單螢幕
+          </Link>
+          <button onClick={() => setSoundOn(!soundOn)} className="text-stone-400 hover:text-white transition-colors p-1.5">
+            {soundOn ? (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            )}
           </button>
           <div className="flex bg-stone-800 rounded-xl p-0.5">
             <button onClick={() => setView("order")}

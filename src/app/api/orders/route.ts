@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { rateLimit, getClientIp, acquireConcurrentSlot, releaseConcurrentSlot } from "@/lib/rate-limit";
+import { orderLimiter } from "@/lib/request-queue";
+import { orderCircuitBreaker } from "@/lib/circuit-breaker";
 import { z } from "zod";
+import { sendOrderNotification } from "@/lib/mailer";
 
 const createOrderSchema = z.object({
   studentId: z.string().min(1).max(20).trim(),
@@ -10,6 +13,7 @@ const createOrderSchema = z.object({
   className: z.string().max(30).nullable().optional(),
   department: z.enum(["breakfast", "lunch"]),
   note: z.string().max(200).nullable().optional(),
+  pickupDate: z.string().max(20).nullable().optional(),
   pickupTime: z.string().max(20).nullable().optional(),
   items: z
     .array(
@@ -25,6 +29,22 @@ const createOrderSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Circuit breaker: fail fast if Firestore is down
+  if (!orderCircuitBreaker.canRequest()) {
+    return NextResponse.json(
+      { error: "系統忙碌中，請稍後再試" },
+      { status: 503 }
+    );
+  }
+
+  // Global concurrent request limit
+  if (!acquireConcurrentSlot()) {
+    return NextResponse.json(
+      { error: "系統忙碌中，請稍後再試" },
+      { status: 503 }
+    );
+  }
+
   try {
     // Rate limit: max 5 orders per IP per 5 minutes
     const ip = getClientIp(req);
@@ -47,68 +67,177 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
 
+    // Verify student is registered
+    if (data.studentId) {
+      const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
+      if (!studentDoc.exists) {
+        return NextResponse.json(
+          { error: "學生身分未驗證，請先註冊帳號" },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Per-student rate limit: max 3 orders per student per 5 minutes
+    const studentRl = rateLimit(`student:${data.studentId}`, 3, 5 * 60 * 1000);
+    if (!studentRl.allowed) {
+      return NextResponse.json(
+        { error: "同一學號訂單送出太頻繁，請稍後再試" },
+        { status: 429 }
+      );
+    }
+
     // Sanitize strings
     const sanitize = (s: string | null | undefined) =>
       s ? s.replace(/[<>]/g, "").trim() : null;
 
-    // Verify menu items exist and prices match
-    const menuRef = adminDb.collection("menuItems");
-    const verifiedItems = [];
+    // Batch-read all menu items in a single Firestore call
+    const menuRefs = data.items.map((item) =>
+      adminDb.collection("menuItems").doc(item.menuItemId)
+    );
+    const menuDocs = await adminDb.getAll(...menuRefs);
+
+    const verifiedItems: { menuItemId: string; name: string; quantity: number; price: number }[] = [];
     let totalPrice = 0;
 
-    for (const item of data.items) {
-      const menuDoc = await menuRef.doc(item.menuItemId).get();
+    for (let i = 0; i < data.items.length; i++) {
+      const menuDoc = menuDocs[i];
       if (!menuDoc.exists) {
-        return NextResponse.json({ error: `品項不存在: ${item.name}` }, { status: 400 });
+        return NextResponse.json(
+          { error: `品項不存在: ${data.items[i].name}` },
+          { status: 400 }
+        );
       }
       const menuData = menuDoc.data()!;
       if (!menuData.available) {
-        return NextResponse.json({ error: `品項已停售: ${menuData.name}` }, { status: 400 });
+        return NextResponse.json(
+          { error: `品項已停售: ${menuData.name}` },
+          { status: 400 }
+        );
       }
-      // Use server-side price (not client-submitted price) to prevent price tampering
       verifiedItems.push({
-        menuItemId: item.menuItemId,
+        menuItemId: data.items[i].menuItemId,
         name: menuData.name,
-        quantity: item.quantity,
+        quantity: data.items[i].quantity,
         price: menuData.price,
       });
-      totalPrice += menuData.price * item.quantity;
+      totalPrice += menuData.price * data.items[i].quantity;
     }
 
-    // Generate order number: YYYYMMDDSSSS (resets daily)
-    const now = new Date();
-    const yyyy = String(now.getFullYear());
-    const mm = String(now.getMonth() + 1).padStart(2, "0");
-    const dd = String(now.getDate()).padStart(2, "0");
-    const datePrefix = `${yyyy}${mm}${dd}`;
+    // Acquire concurrency slot
+    await orderLimiter.acquire();
 
-    const todayStart = new Date(now);
-    todayStart.setHours(0, 0, 0, 0);
-    const ordersRef = adminDb.collection("orders");
-    const todaySnap = await ordersRef
-      .where("createdAt", ">=", todayStart)
-      .get();
-    const seq = String(todaySnap.size + 1).padStart(4, "0");
-    const orderNumber = `${datePrefix}${seq}`;
+    try {
+      // Atomic order number via Firestore transaction
+      const now = new Date();
+      const yyyy = String(now.getFullYear());
+      const mm = String(now.getMonth() + 1).padStart(2, "0");
+      const dd = String(now.getDate()).padStart(2, "0");
+      const todayDate = `${yyyy}${mm}${dd}`;
 
-    const docRef = await ordersRef.add({
-      studentId: sanitize(data.studentId)!,
-      studentName: sanitize(data.studentName),
-      className: sanitize(data.className),
-      department: data.department,
-      note: sanitize(data.note),
-      pickupTime: sanitize(data.pickupTime),
-      totalPrice,
-      status: "pending",
-      orderNumber,
-      items: verifiedItems,
-      createdAt: FieldValue.serverTimestamp(),
-    });
+      const counterRef = adminDb.collection("counters").doc("orderNumber");
 
-    return NextResponse.json({ id: docRef.id, orderNumber }, { status: 201 });
+      const result = await adminDb.runTransaction(async (tx) => {
+        // Re-read menu items inside transaction for stock check
+        const freshMenuDocs = await Promise.all(
+          menuRefs.map((ref) => tx.get(ref))
+        );
+
+        // Check stock availability
+        for (let i = 0; i < data.items.length; i++) {
+          const menuData = freshMenuDocs[i].data()!;
+          if (menuData.stock !== null && menuData.stock !== undefined) {
+            if (menuData.stock < data.items[i].quantity) {
+              throw new Error(`庫存不足: ${menuData.name}（剩餘 ${menuData.stock} 份）`);
+            }
+          }
+          if (menuData.soldOut) {
+            throw new Error(`已售罄: ${menuData.name}`);
+          }
+        }
+
+        // Decrement stock
+        for (let i = 0; i < data.items.length; i++) {
+          const menuData = freshMenuDocs[i].data()!;
+          if (menuData.stock !== null && menuData.stock !== undefined) {
+            const newStock = menuData.stock - data.items[i].quantity;
+            const updates: Record<string, unknown> = { stock: newStock };
+            if (newStock <= 0) {
+              updates.soldOut = true;
+              updates.available = false;
+            }
+            tx.update(menuRefs[i], updates);
+          }
+        }
+
+        const counterDoc = await tx.get(counterRef);
+        let seq = 1;
+
+        if (counterDoc.exists) {
+          const counterData = counterDoc.data()!;
+          if (counterData.date === todayDate) {
+            seq = (counterData.seq || 0) + 1;
+          }
+        }
+
+        tx.set(counterRef, { date: todayDate, seq });
+
+        const orderNumber = `${todayDate}${String(seq).padStart(4, "0")}`;
+
+        const orderRef = adminDb.collection("orders").doc();
+        tx.set(orderRef, {
+          studentId: sanitize(data.studentId)!,
+          studentName: sanitize(data.studentName),
+          className: sanitize(data.className),
+          department: data.department,
+          note: sanitize(data.note),
+          pickupDate: sanitize(data.pickupDate),
+          pickupTime: sanitize(data.pickupTime),
+          totalPrice,
+          status: "pending",
+          orderNumber,
+          items: verifiedItems,
+          createdAt: FieldValue.serverTimestamp(),
+        });
+
+        return { id: orderRef.id, orderNumber };
+      });
+
+      orderCircuitBreaker.recordSuccess();
+
+      // Send order confirmation email
+      try {
+        const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
+        const studentEmail = studentDoc.exists ? studentDoc.data()?.email : null;
+        if (studentEmail) {
+          await sendOrderNotification({
+            to: studentEmail,
+            studentName: sanitize(data.studentName) || "",
+            orderNumber: result.orderNumber,
+            status: "pending",
+            department: data.department,
+            items: verifiedItems,
+            totalPrice,
+          });
+        }
+      } catch (emailErr) {
+        console.error("Order confirmation email error:", emailErr);
+      }
+
+      return NextResponse.json(result, { status: 201 });
+    } finally {
+      orderLimiter.release();
+    }
   } catch (err) {
+    // Stock/soldOut errors are user-facing
+    if (err instanceof Error && (err.message.startsWith("庫存不足") || err.message.startsWith("已售罄"))) {
+      return NextResponse.json({ error: err.message }, { status: 400 });
+    }
+    orderCircuitBreaker.recordFailure();
     console.error("POST /api/orders error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
+  } finally {
+    releaseConcurrentSlot();
   }
 }
 
@@ -121,6 +250,11 @@ export async function GET(req: NextRequest) {
     if (department) q = q.where("department", "==", department);
 
     const snap = await q.get();
+
+    // Filter to today's orders in JS (avoid composite index requirement)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
     let orders = snap.docs.map((d) => {
       const data = d.data();
       return {
@@ -128,6 +262,9 @@ export async function GET(req: NextRequest) {
         ...data,
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
       };
+    }).filter((o: Record<string, unknown>) => {
+      const created = new Date(o.createdAt as string);
+      return created >= todayStart;
     });
 
     if (status) {

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { MenuCard } from "@/components/MenuCard";
 import { CartBar } from "@/components/CartBar";
+import { BackButton } from "@/components/BackButton";
 import { useMenuItems } from "@/lib/hooks";
 
 function isLunchTime() {
@@ -28,8 +28,8 @@ export default function LunchPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="sticky top-0 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white px-5 py-4 flex items-center gap-3 shadow-md shadow-orange-200/30">
-        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">←</Link>
+      <header className="sticky top-0 z-10 bg-gradient-to-r from-[#FF6B35] to-[#E23D28] text-white px-5 py-4 flex items-center gap-3 shadow-md shadow-orange-200/30">
+        <BackButton href="/" variant="light" />
         <div>
           <h1 className="text-lg font-bold tracking-tight">午餐部</h1>
           <p className="text-orange-100 text-xs">11:00 ~ 13:00</p>
@@ -50,7 +50,7 @@ export default function LunchPage() {
             onClick={() => setCategory(c)}
             className={`px-5 py-2 rounded-full text-sm whitespace-nowrap transition-all duration-200 font-medium ${
               category === c
-                ? "bg-orange-500 text-white shadow-md shadow-orange-200/50"
+                ? "bg-[#FF6B35] text-white shadow-md shadow-orange-200/50"
                 : "bg-stone-100 text-stone-600 hover:bg-stone-200"
             }`}
           >
@@ -62,7 +62,7 @@ export default function LunchPage() {
       <main className="flex-1 px-5 pb-28">
         {loading ? (
           <div className="flex items-center justify-center mt-20">
-            <div className="w-8 h-8 border-3 border-orange-200 border-t-orange-500 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-3 border-orange-200 border-t-[#FF6B35] rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-center text-stone-400 mt-20">目前沒有品項</p>

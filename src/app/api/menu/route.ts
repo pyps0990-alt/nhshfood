@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth";
+import { getMenuCache, setMenuCache, invalidateMenuCache } from "@/lib/menu-cache";
 
 export async function GET(req: NextRequest) {
   try {
     const department = req.nextUrl.searchParams.get("department");
     const includeAll = req.nextUrl.searchParams.get("all") === "true";
+
+    const cacheKey = `${department || "all"}-${includeAll}`;
+    const cached = getMenuCache(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+        },
+      });
+    }
 
     let q: FirebaseFirestore.Query = adminDb.collection("menuItems");
     if (department) q = q.where("department", "==", department);
@@ -22,7 +33,13 @@ export async function GET(req: NextRequest) {
       ((a.category as string) || "").localeCompare((b.category as string) || "")
     );
 
-    return NextResponse.json(items);
+    setMenuCache(cacheKey, items);
+
+    return NextResponse.json(items, {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    });
   } catch (err) {
     console.error("GET /api/menu error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
@@ -51,6 +68,16 @@ export async function POST(req: NextRequest) {
     const sanitize = (s: string | null | undefined) =>
       s ? s.replace(/[<>]/g, "").trim().slice(0, 200) : null;
 
+    // Validate tags
+    const validTags = ["promotion", "seasonal", "daily_special"];
+    const tags = Array.isArray(body.tags)
+      ? body.tags.filter((t: string) => validTags.includes(t))
+      : [];
+
+    const stock = typeof body.stock === "number" && body.stock >= 0
+      ? Math.round(body.stock)
+      : null;
+
     const ref = await adminDb.collection("menuItems").add({
       name: sanitize(body.name)!,
       price: Math.round(body.price),
@@ -59,8 +86,14 @@ export async function POST(req: NextRequest) {
       description: sanitize(body.description),
       imageUrl: body.imageUrl || null,
       available: true,
+      tags,
+      stock,
+      soldOut: false,
       createdAt: FieldValue.serverTimestamp(),
     });
+
+    // Invalidate menu cache after adding a new item
+    invalidateMenuCache();
 
     return NextResponse.json({ id: ref.id }, { status: 201 });
   } catch (err) {

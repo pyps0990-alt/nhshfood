@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/lib/cart";
 import { getDeptConfig } from "@/lib/department";
+import { BackButton } from "@/components/BackButton";
 
 export default function CartPage() {
   const { department } = useParams<{ department: string }>();
@@ -25,8 +26,8 @@ export default function CartPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className={`sticky top-0 z-10 bg-gradient-to-r ${department === "breakfast" ? "from-amber-500 to-amber-600" : "from-orange-500 to-red-500"} text-white px-5 py-4 flex items-center gap-3 shadow-md`}>
-        <Link href={`/${department}`} className="text-xl hover:opacity-80 transition-opacity">←</Link>
+      <header className={`sticky top-0 z-10 bg-gradient-to-r ${department === "breakfast" ? "from-[#E23D28] to-[#d63520]" : "from-[#FF6B35] to-[#E23D28]"} text-white px-5 py-4 flex items-center gap-3 shadow-md`}>
+        <BackButton href={`/${department}`} variant="light" />
         <h1 className="text-lg font-bold tracking-tight">購物車</h1>
         <button onClick={() => { clear(); router.push(`/${department}`); }} className="ml-auto text-sm opacity-80 hover:opacity-100 transition-opacity">
           清空

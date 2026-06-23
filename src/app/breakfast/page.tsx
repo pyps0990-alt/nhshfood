@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { MenuCard } from "@/components/MenuCard";
 import { CartBar } from "@/components/CartBar";
+import { BackButton } from "@/components/BackButton";
 import { useMenuItems } from "@/lib/hooks";
 
 export default function BreakfastPage() {
@@ -16,11 +16,11 @@ export default function BreakfastPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="sticky top-0 z-10 bg-gradient-to-r from-amber-500 to-amber-600 text-white px-5 py-4 flex items-center gap-3 shadow-md shadow-amber-200/30">
-        <Link href="/" className="text-xl hover:opacity-80 transition-opacity">←</Link>
+      <header className="sticky top-0 z-10 bg-gradient-to-r from-[#E23D28] to-[#d63520] text-white px-5 py-4 flex items-center gap-3 shadow-md shadow-red-200/30">
+        <BackButton href="/" variant="light" />
         <div>
           <h1 className="text-lg font-bold tracking-tight">早餐部</h1>
-          <p className="text-amber-100 text-xs">早上～下午供應</p>
+          <p className="text-red-100 text-xs">早上～下午供應</p>
         </div>
       </header>
 
@@ -31,7 +31,7 @@ export default function BreakfastPage() {
             onClick={() => setCategory(c)}
             className={`px-5 py-2 rounded-full text-sm whitespace-nowrap transition-all duration-200 font-medium ${
               category === c
-                ? "bg-amber-500 text-white shadow-md shadow-amber-200/50"
+                ? "bg-[#E23D28] text-white shadow-md shadow-red-200/50"
                 : "bg-stone-100 text-stone-600 hover:bg-stone-200"
             }`}
           >
@@ -43,7 +43,7 @@ export default function BreakfastPage() {
       <main className="flex-1 px-5 pb-28">
         {loading ? (
           <div className="flex items-center justify-center mt-20">
-            <div className="w-8 h-8 border-3 border-amber-200 border-t-amber-500 rounded-full animate-spin" />
+            <div className="w-8 h-8 border-3 border-red-200 border-t-[#E23D28] rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
           <p className="text-center text-stone-400 mt-20">目前沒有品項</p>

@@ -4,8 +4,8 @@
   "description": "內湖高中熱食部線上訂餐系統",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#f59e0b",
+  "background_color": "#FFF8F0",
+  "theme_color": "#E23D28",
   "icons": [
     {
       "src": "/icon-192.svg",

@@ -1,6 +1,6 @@
 /**
- * Simple in-memory rate limiter for serverless
- * Resets on cold start, but sufficient for school use
+ * In-memory rate limiter for serverless.
+ * Includes per-key rate limiting and global concurrent request counting.
  */
 
 interface RateEntry {
@@ -35,6 +35,23 @@ export function rateLimit(
   const remaining = Math.max(0, maxRequests - entry.count);
 
   return { allowed: entry.count <= maxRequests, remaining };
+}
+
+/**
+ * Global concurrent order request counter.
+ * Rejects when too many orders are being processed simultaneously.
+ */
+let concurrentOrderRequests = 0;
+const MAX_CONCURRENT_ORDERS = 100;
+
+export function acquireConcurrentSlot(): boolean {
+  if (concurrentOrderRequests >= MAX_CONCURRENT_ORDERS) return false;
+  concurrentOrderRequests++;
+  return true;
+}
+
+export function releaseConcurrentSlot(): void {
+  concurrentOrderRequests = Math.max(0, concurrentOrderRequests - 1);
 }
 
 /**
