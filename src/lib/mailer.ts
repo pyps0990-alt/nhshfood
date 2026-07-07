@@ -36,11 +36,11 @@ function getTransporter() {
 }
 
 const statusLabels: Record<string, string> = {
-  pending: "📋 訂單已收到",
+  pending: "訂單已收到",
   confirmed: "準備中",
-  ready: "✅ 可取餐",
+  ready: "可取餐",
   picked_up: "已取餐",
-  cancelled: "❌ 已取消",
+  cancelled: "已取消",
 };
 
 export async function sendOrderNotification(params: {
@@ -60,56 +60,87 @@ export async function sendOrderNotification(params: {
   const deptLabel = department === "breakfast" ? "早餐部" : "午餐部";
   const statusLabel = statusLabels[status] || status;
 
-  const itemList = items
-    .map((i) => `${i.name} × ${i.quantity}　$${i.price * i.quantity}`)
-    .join("\n      ");
-
   const subject = `【內湖高中熱食部】訂單 #${displayNum} ${statusLabel}`;
 
+  const statusColor = status === "ready" ? "#059669" : status === "cancelled" ? "#dc2626" : status === "confirmed" ? "#2563eb" : "#E23D28";
+  const statusSvg: Record<string, string> = {
+    pending: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+    confirmed: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>`,
+    ready: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
+    cancelled: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
+  };
+  const statusMessages: Record<string, string> = {
+    pending: "我們已收到您的訂單",
+    confirmed: "店家已確認，正在為您準備餐點",
+    ready: "餐點已備妥，請盡快前往取餐",
+    cancelled: "很抱歉，您的訂單已被取消",
+  };
+  const statusMsg = statusMessages[status] || "";
+
+  const statusEmoji: Record<string, string> = {
+    pending: "&#128337;",
+    confirmed: "&#127859;",
+    ready: "&#9989;",
+    picked_up: "&#127860;",
+    cancelled: "&#10060;",
+  };
+
+  const itemRows = items.map((i) =>
+    `<tr>
+      <td style="padding:8px 0;font-size:14px;color:#333;border-bottom:1px solid #f0f0f0">${i.name} x ${i.quantity}</td>
+      <td style="padding:8px 0;font-size:14px;color:#333;text-align:right;font-weight:600;border-bottom:1px solid #f0f0f0">$${i.price * i.quantity}</td>
+    </tr>`
+  ).join("");
+
   const html = `
-    <div style="font-family: -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #E23D28, #FF6B35); color: white; padding: 24px; border-radius: 16px 16px 0 0; text-align: center;">
-        <h1 style="margin: 0; font-size: 18px;">內湖高中熱食部</h1>
-        <p style="margin: 8px 0 0; opacity: 0.9; font-size: 13px;">訂單通知</p>
-      </div>
-      <div style="background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 24px; border-radius: 0 0 16px 16px;">
-        <p style="margin: 0 0 4px; color: #888; font-size: 13px;">取餐號碼</p>
-        <p style="margin: 0 0 16px; font-size: 32px; font-weight: 900; color: #1a1a1a;">#${displayNum}</p>
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    <body style="margin:0;padding:0;background:#f5f0eb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+      <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 16px">
+        <tr><td align="center">
+          <table width="400" cellpadding="0" cellspacing="0" style="max-width:400px;width:100%">
+            <!-- Header -->
+            <tr><td style="background:${statusColor};padding:32px 24px;border-radius:16px 16px 0 0;text-align:center">
+              <div style="font-size:40px;margin-bottom:12px">${statusEmoji[status] || statusEmoji.pending}</div>
+              <p style="margin:0;font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.02em">${statusLabel}</p>
+              <p style="margin:8px 0 0;font-size:14px;color:rgba(255,255,255,0.85)">${statusMsg}</p>
+            </td></tr>
 
-        <div style="background: ${status === "ready" ? "#ecfdf5" : status === "cancelled" ? "#fef2f2" : "#eff6ff"};
-             border: 1px solid ${status === "ready" ? "#a7f3d0" : status === "cancelled" ? "#fecaca" : "#bfdbfe"};
-             padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; text-align: center;">
-          <span style="font-weight: 700; color: ${status === "ready" ? "#059669" : status === "cancelled" ? "#dc2626" : "#2563eb"};">
-            ${statusLabel}
-          </span>
-        </div>
+            <!-- Order Number -->
+            <tr><td style="background:#fff;padding:24px;text-align:center;border-left:1px solid #e5e5e5;border-right:1px solid #e5e5e5">
+              <p style="margin:0;font-size:12px;color:#999;text-transform:uppercase;letter-spacing:0.05em">${deptLabel}</p>
+              <p style="margin:8px 0 0;font-size:40px;font-weight:900;color:#1a1a1a;letter-spacing:-0.02em">#${displayNum}</p>
+            </td></tr>
 
-        ${studentName ? `<p style="margin: 0 0 12px; font-size: 14px; color: #555;">同學你好，${studentName}！</p>` : ""}
+            <!-- Items -->
+            <tr><td style="background:#fff;padding:0 24px;border-left:1px solid #e5e5e5;border-right:1px solid #e5e5e5">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-top:2px solid #f0f0f0">
+                ${itemRows}
+                <tr>
+                  <td style="padding:12px 0 0;font-size:16px;font-weight:800;color:#1a1a1a">合計</td>
+                  <td style="padding:12px 0 0;font-size:18px;font-weight:800;color:#E23D28;text-align:right">$${totalPrice}</td>
+                </tr>
+              </table>
+            </td></tr>
 
-        <table style="width: 100%; font-size: 13px; color: #555; margin-bottom: 12px;">
-          <tr><td style="padding: 4px 0;">部門</td><td style="text-align: right; font-weight: 600;">${deptLabel}</td></tr>
-        </table>
+            ${status === "ready" ? `
+            <!-- Ready Banner -->
+            <tr><td style="background:#fff;padding:16px 24px;border-left:1px solid #e5e5e5;border-right:1px solid #e5e5e5">
+              <div style="background:#ecfdf5;border:2px solid #a7f3d0;border-radius:12px;padding:16px;text-align:center">
+                <p style="margin:0;font-size:16px;font-weight:700;color:#059669">&#128205; 請至${deptLabel}取餐</p>
+              </div>
+            </td></tr>` : ""}
 
-        <div style="background: #f9f9f9; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
-          <p style="margin: 0 0 8px; font-weight: 700; font-size: 14px;">訂單內容</p>
-          <pre style="margin: 0; font-family: inherit; font-size: 13px; color: #555; white-space: pre-wrap;">${itemList}</pre>
-          <div style="border-top: 1px solid #e5e5e5; margin-top: 12px; padding-top: 12px; font-weight: 700; font-size: 16px; text-align: right;">
-            合計 $${totalPrice}
-          </div>
-        </div>
-
-        ${status === "ready" ? `
-        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 16px; text-align: center;">
-          <p style="margin: 0; font-weight: 700; color: #059669; font-size: 16px;">🎉 餐點已備好！</p>
-          <p style="margin: 8px 0 0; color: #047857; font-size: 13px;">請至${deptLabel}取餐</p>
-        </div>
-        ` : ""}
-
-        <p style="margin: 24px 0 0; font-size: 11px; color: #aaa; text-align: center;">
-          此為系統自動發送，請勿直接回覆
-        </p>
-      </div>
-    </div>
+            <!-- Footer -->
+            <tr><td style="background:#fafaf8;padding:20px 24px;border-radius:0 0 16px 16px;text-align:center;border:1px solid #e5e5e5;border-top:none">
+              <p style="margin:0;font-size:11px;color:#bbb">內湖高中熱食部 · nhsh-food.vercel.app</p>
+            </td></tr>
+          </table>
+        </td></tr>
+      </table>
+    </body>
+    </html>
   `;
 
   try {

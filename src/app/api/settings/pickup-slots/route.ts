@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { z } from "zod";
+import { getCached, setCached } from "@/lib/menu-cache";
 
 const DOC_PATH = "settings/pickupSlots";
+const CACHE_KEY = "pickup-slots";
 
 const DEFAULT_SLOTS = {
   breakfast: ["盡快取餐", "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00"],
@@ -11,15 +13,17 @@ const DEFAULT_SLOTS = {
 
 export async function GET() {
   try {
+    const cached = getCached<Record<string, string[]>>(CACHE_KEY, 300_000);
+    if (cached) return NextResponse.json(cached);
+
     const doc = await adminDb.doc(DOC_PATH).get();
-    if (!doc.exists) {
-      return NextResponse.json(DEFAULT_SLOTS);
-    }
-    const data = doc.data()!;
-    return NextResponse.json({
-      breakfast: data.breakfast || DEFAULT_SLOTS.breakfast,
-      lunch: data.lunch || DEFAULT_SLOTS.lunch,
-    });
+    const result = !doc.exists ? DEFAULT_SLOTS : {
+      breakfast: doc.data()!.breakfast || DEFAULT_SLOTS.breakfast,
+      lunch: doc.data()!.lunch || DEFAULT_SLOTS.lunch,
+    };
+
+    setCached(CACHE_KEY, result);
+    return NextResponse.json(result);
   } catch (err) {
     console.error("GET /api/settings/pickup-slots error:", err);
     return NextResponse.json(DEFAULT_SLOTS);

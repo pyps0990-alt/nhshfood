@@ -1,30 +1,47 @@
 /**
- * Server-side in-memory menu cache with 30-second TTL.
- * Reduces Firestore reads for the menu GET endpoint.
+ * Server-side in-memory cache with configurable TTL.
+ * Reduces Firestore reads for frequently accessed endpoints.
  */
 
-interface CacheEntry {
-  data: unknown[];
+interface CacheEntry<T = unknown> {
+  data: T;
   timestamp: number;
 }
 
-const TTL_MS = 30_000;
+const TTL_MS = 60_000;
 const cache = new Map<string, CacheEntry>();
 
 export function getMenuCache(key: string): unknown[] | null {
-  const entry = cache.get(key);
+  const entry = cache.get(`menu:${key}`);
   if (!entry) return null;
   if (Date.now() - entry.timestamp > TTL_MS) {
-    cache.delete(key);
+    cache.delete(`menu:${key}`);
     return null;
   }
-  return entry.data;
+  return entry.data as unknown[];
 }
 
 export function setMenuCache(key: string, data: unknown[]): void {
-  cache.set(key, { data, timestamp: Date.now() });
+  cache.set(`menu:${key}`, { data, timestamp: Date.now() });
 }
 
 export function invalidateMenuCache(): void {
-  cache.clear();
+  for (const key of cache.keys()) {
+    if (key.startsWith("menu:")) cache.delete(key);
+  }
+}
+
+// Generic cache for any API data
+export function getCached<T>(key: string, ttlMs: number = TTL_MS): T | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > ttlMs) {
+    cache.delete(key);
+    return null;
+  }
+  return entry.data as T;
+}
+
+export function setCached<T>(key: string, data: T): void {
+  cache.set(key, { data, timestamp: Date.now() });
 }

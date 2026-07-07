@@ -29,6 +29,7 @@ export interface MenuItem {
 export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
+  department?: string;
 }
 
 export interface Order {

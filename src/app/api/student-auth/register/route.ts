@@ -17,8 +17,16 @@ const registerSchema = z.object({
   password: passwordSchema,
   className: z.string().min(1).max(10).trim(),
   studentName: z.string().min(1).max(50).trim(),
+  displayName: z.string().max(30).trim().optional(),
   email: z.string().email().max(100).trim(),
 });
+
+async function getAppConfig() {
+  try {
+    const snap = await adminDb.collection("settings").doc("app-config").get();
+    return { requireSchoolEmail: true, requireLocation: true, ...snap.data() };
+  } catch { return { requireSchoolEmail: true, requireLocation: true }; }
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -29,7 +37,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: firstError }, { status: 400 });
     }
 
-    const { studentId, password, className, studentName, email } = parsed.data;
+    const { studentId, password, className, studentName, displayName, email } = parsed.data;
+
+    const config = await getAppConfig();
+    if (config.requireSchoolEmail && !email.toLowerCase().endsWith("@nhsh.tp.edu.tw")) {
+      return NextResponse.json({ error: "僅限使用學校 Email（@nhsh.tp.edu.tw）" }, { status: 400 });
+    }
 
     const docId = studentId;
     const existing = await adminDb.collection("students").doc(docId).get();
@@ -49,20 +62,24 @@ export async function POST(req: NextRequest) {
     const sanitize = (s: string) => s.replace(/[<>]/g, "").trim();
     const passwordHash = await bcrypt.hash(password, 12);
 
-    await adminDb.collection("students").doc(docId).set({
+    const doc: Record<string, string> = {
       studentId: sanitize(studentId),
       className: sanitize(className),
       studentName: sanitize(studentName),
       email: email.trim().toLowerCase(),
       passwordHash,
       createdAt: new Date().toISOString(),
-    });
+    };
+    if (displayName) doc.displayName = sanitize(displayName);
+
+    await adminDb.collection("students").doc(docId).set(doc);
 
     return NextResponse.json({
       id: docId,
       studentId,
       className,
       studentName,
+      displayName: displayName || "",
       email,
     }, { status: 201 });
   } catch (err) {

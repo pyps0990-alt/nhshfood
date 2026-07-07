@@ -8,6 +8,7 @@ export interface StudentProfile {
   studentId: string;
   className: string;
   studentName: string;
+  displayName?: string;
   email: string;
 }
 

@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { rateLimit, getClientIp, acquireConcurrentSlot, releaseConcurrentSlot } from "@/lib/rate-limit";
 import { orderLimiter } from "@/lib/request-queue";
 import { orderCircuitBreaker } from "@/lib/circuit-breaker";
+import { isWithinSchool } from "@/lib/geo";
 import { z } from "zod";
 import { sendOrderNotification } from "@/lib/mailer";
 
@@ -13,6 +14,7 @@ const createOrderSchema = z.object({
   className: z.string().max(30).nullable().optional(),
   department: z.enum(["breakfast", "lunch"]),
   note: z.string().max(200).nullable().optional(),
+  paymentMethod: z.enum(["cash", "wallet"]).default("cash"),
   pickupDate: z.string().max(20).nullable().optional(),
   pickupTime: z.string().max(20).nullable().optional(),
   items: z
@@ -20,12 +22,19 @@ const createOrderSchema = z.object({
       z.object({
         menuItemId: z.string().min(1).max(50),
         name: z.string().min(1).max(100),
-        quantity: z.number().int().min(1).max(20),
+        quantity: z.number().int().min(1).max(999),
         price: z.number().int().min(0).max(10000),
       })
     )
     .min(1)
     .max(30),
+  coords: z
+    .object({
+      lat: z.number().gte(-90).lte(90),
+      lng: z.number().gte(-180).lte(180),
+    })
+    .nullable()
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -76,6 +85,35 @@ export async function POST(req: NextRequest) {
           { status: 403 }
         );
       }
+    }
+
+    // Location gate: always read the *current* app-config on the server so an
+    // admin toggling `requireLocation` takes effect on the very next order,
+    // regardless of any client-side or CDN cached copy.
+    try {
+      const cfgSnap = await adminDb.collection("settings").doc("app-config").get();
+      const requireLocation = cfgSnap.exists ? cfgSnap.data()?.requireLocation !== false : true;
+      if (requireLocation) {
+        if (!data.coords) {
+          return NextResponse.json(
+            { error: "請允許定位權限以確認您在校園內" },
+            { status: 403 }
+          );
+        }
+        if (!isWithinSchool(data.coords.lat, data.coords.lng)) {
+          return NextResponse.json(
+            { error: "請在校園範圍內下單" },
+            { status: 403 }
+          );
+        }
+      }
+    } catch (err) {
+      console.error("Location gate check failed:", err);
+      // Fail closed rather than open — if we can't verify, don't accept the order.
+      return NextResponse.json(
+        { error: "系統暫時無法驗證位置，請稍後再試" },
+        { status: 503 }
+      );
     }
 
     // Per-student rate limit: max 3 orders per student per 5 minutes
@@ -138,12 +176,21 @@ export async function POST(req: NextRequest) {
       const counterRef = adminDb.collection("counters").doc("orderNumber");
 
       const result = await adminDb.runTransaction(async (tx) => {
-        // Re-read menu items inside transaction for stock check
+        // === ALL READS FIRST (Firestore requirement) ===
         const freshMenuDocs = await Promise.all(
           menuRefs.map((ref) => tx.get(ref))
         );
+        const counterDoc = await tx.get(counterRef);
 
-        // Check stock availability
+        let walletSnap: FirebaseFirestore.DocumentSnapshot | null = null;
+        const walletRef = data.paymentMethod === "wallet"
+          ? adminDb.collection("wallets").doc(data.studentId)
+          : null;
+        if (walletRef) {
+          walletSnap = await tx.get(walletRef);
+        }
+
+        // === VALIDATION ===
         for (let i = 0; i < data.items.length; i++) {
           const menuData = freshMenuDocs[i].data()!;
           if (menuData.stock !== null && menuData.stock !== undefined) {
@@ -154,6 +201,37 @@ export async function POST(req: NextRequest) {
           if (menuData.soldOut) {
             throw new Error(`已售罄: ${menuData.name}`);
           }
+        }
+
+        if (data.paymentMethod === "wallet") {
+          if (!walletSnap || !walletSnap.exists) {
+            throw new Error("WALLET_NOT_FOUND");
+          }
+          const wallet = walletSnap.data()!;
+          if (wallet.balance < totalPrice) {
+            throw new Error("INSUFFICIENT_BALANCE");
+          }
+        }
+
+        // === ALL WRITES ===
+
+        // Wallet deduction
+        if (data.paymentMethod === "wallet" && walletRef && walletSnap) {
+          const wallet = walletSnap.data()!;
+          const newBalance = wallet.balance - totalPrice;
+          tx.update(walletRef, { balance: newBalance, updatedAt: new Date().toISOString() });
+
+          const walletTxRef = adminDb.collection("wallet_transactions").doc();
+          tx.set(walletTxRef, {
+            studentId: data.studentId,
+            amount: -totalPrice,
+            type: "payment",
+            method: "wallet",
+            note: null,
+            balanceAfter: newBalance,
+            createdAt: new Date().toISOString(),
+            createdBy: data.studentId,
+          });
         }
 
         // Decrement stock
@@ -170,16 +248,14 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const counterDoc = await tx.get(counterRef);
+        // Order number
         let seq = 1;
-
         if (counterDoc.exists) {
           const counterData = counterDoc.data()!;
           if (counterData.date === todayDate) {
             seq = (counterData.seq || 0) + 1;
           }
         }
-
         tx.set(counterRef, { date: todayDate, seq });
 
         const orderNumber = `${todayDate}${String(seq).padStart(4, "0")}`;
@@ -191,6 +267,7 @@ export async function POST(req: NextRequest) {
           className: sanitize(data.className),
           department: data.department,
           note: sanitize(data.note),
+          paymentMethod: data.paymentMethod,
           pickupDate: sanitize(data.pickupDate),
           pickupTime: sanitize(data.pickupTime),
           totalPrice,
@@ -205,23 +282,27 @@ export async function POST(req: NextRequest) {
 
       orderCircuitBreaker.recordSuccess();
 
-      // Send order confirmation email
+      // Send order confirmation based on notification preference
       try {
         const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
-        const studentEmail = studentDoc.exists ? studentDoc.data()?.email : null;
-        if (studentEmail) {
-          await sendOrderNotification({
-            to: studentEmail,
-            studentName: sanitize(data.studentName) || "",
-            orderNumber: result.orderNumber,
-            status: "pending",
-            department: data.department,
-            items: verifiedItems,
-            totalPrice,
-          });
+        const notifyMethod = studentDoc.exists ? (studentDoc.data()?.notifyMethod || "email") : "email";
+
+        if (notifyMethod === "email" || !notifyMethod) {
+          const studentEmail = studentDoc.exists ? studentDoc.data()?.email : null;
+          if (studentEmail) {
+            await sendOrderNotification({
+              to: studentEmail,
+              studentName: sanitize(data.studentName) || "",
+              orderNumber: result.orderNumber,
+              status: "pending",
+              department: data.department,
+              items: verifiedItems,
+              totalPrice,
+            });
+          }
         }
-      } catch (emailErr) {
-        console.error("Order confirmation email error:", emailErr);
+      } catch (notifyErr) {
+        console.error("Order confirmation notification error:", notifyErr);
       }
 
       return NextResponse.json(result, { status: 201 });
@@ -230,8 +311,16 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     // Stock/soldOut errors are user-facing
-    if (err instanceof Error && (err.message.startsWith("庫存不足") || err.message.startsWith("已售罄"))) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
+    if (err instanceof Error) {
+      if (err.message.startsWith("庫存不足") || err.message.startsWith("已售罄")) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      if (err.message === "WALLET_NOT_FOUND") {
+        return NextResponse.json({ error: "找不到錢包，請先開通錢包" }, { status: 404 });
+      }
+      if (err.message === "INSUFFICIENT_BALANCE") {
+        return NextResponse.json({ error: "錢包餘額不足" }, { status: 400 });
+      }
     }
     orderCircuitBreaker.recordFailure();
     console.error("POST /api/orders error:", err);
@@ -246,14 +335,15 @@ export async function GET(req: NextRequest) {
     const department = req.nextUrl.searchParams.get("department");
     const status = req.nextUrl.searchParams.get("status");
 
-    let q: FirebaseFirestore.Query = adminDb.collection("orders");
-    if (department) q = q.where("department", "==", department);
-
-    const snap = await q.get();
-
-    // Filter to today's orders in JS (avoid composite index requirement)
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
+
+    // Use createdAt >= todayStart to only read today's orders from Firestore
+    let q: FirebaseFirestore.Query = adminDb
+      .collection("orders")
+      .where("createdAt", ">=", todayStart);
+
+    const snap = await q.get();
 
     let orders = snap.docs.map((d) => {
       const data = d.data();
@@ -262,11 +352,12 @@ export async function GET(req: NextRequest) {
         ...data,
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
       };
-    }).filter((o: Record<string, unknown>) => {
-      const created = new Date(o.createdAt as string);
-      return created >= todayStart;
     });
 
+    // Filter by department and status in JS (avoids composite index)
+    if (department) {
+      orders = orders.filter((o: Record<string, unknown>) => o.department === department);
+    }
     if (status) {
       orders = orders.filter((o: Record<string, unknown>) => o.status === status);
     }
@@ -275,7 +366,9 @@ export async function GET(req: NextRequest) {
       new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
     );
 
-    return NextResponse.json(orders);
+    return NextResponse.json(orders, {
+      headers: { "Cache-Control": "private, max-age=5" },
+    });
   } catch (err) {
     console.error("GET /api/orders error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });

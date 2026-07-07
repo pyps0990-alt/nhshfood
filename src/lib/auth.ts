@@ -1,9 +1,11 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "nhhs-food-secret-key-change-in-production"
-);
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error("JWT_SECRET env var is not set!");
+}
+const SECRET = new TextEncoder().encode(JWT_SECRET || "MISSING-JWT-SECRET");
 
 export async function createToken(username: string) {
   return new SignJWT({ username })

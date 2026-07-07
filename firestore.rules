@@ -1,0 +1,117 @@
+// Firestore security rules for 內湖高中熱食部線上版.
+//
+// Trust model
+// ─────────────
+// This app has two client identities that talk to Firestore directly:
+//
+//   1. Anonymous / student browser  – reads public data (menu, individual
+//      order status). Never authenticates with Firebase.
+//   2. Admin browser – authenticates via an httpOnly cookie against our own
+//      Next.js API routes. It does NOT sign in to Firebase.
+//
+// All privileged writes (wallet balance changes, admin mutations of orders /
+// menu / students) go through Next.js API routes using the firebase-admin
+// SDK, which bypasses these rules. Therefore these rules only need to
+// protect what the CLIENT SDK is allowed to see or change.
+//
+// Golden rule:  if a collection contains anything that could identify or
+// financially damage a student, it must be closed off entirely at the
+// client SDK layer. There is no "read your own" middle ground because we
+// do not have Firebase-side per-user auth.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Public data ─────────────────────────────────────────────
+    // Menu is public read; writes only via admin API (firebase-admin bypasses).
+    match /menuItems/{itemId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── Orders ──────────────────────────────────────────────────
+    // Individual order status page (/order/[id]) needs `get` by the exact
+    // Firestore-generated ID. IDs are 20-char unguessable strings; treating
+    // that as the capability token is standard.
+    //
+    // `list` (queries) is DENIED for clients. The admin dashboard's realtime
+    // listener bypasses these rules because it authenticates through the
+    // Next.js API layer using firebase-admin — see /api/orders/*.
+    //
+    // NOTE: today the admin dashboard's list query goes through the client
+    // SDK. Before enforcing these rules on the live project, that listener
+    // must be migrated to a server-authenticated stream (or the admin must
+    // sign in to Firebase with a custom token containing an `admin` claim).
+    // Until then, admin list falls back to the transitional rule below.
+    match /orders/{orderId} {
+      allow get: if true;
+      allow list: if isAdminBearer();
+      allow create, update, delete: if false;
+    }
+
+    // ── Wallets — HARD LOCK ─────────────────────────────────────
+    // Balances must never be readable or writable from a browser. All access
+    // happens through server-side API routes /api/wallet/* which use
+    // firebase-admin.
+    match /wallets/{studentId} {
+      allow read, write: if false;
+    }
+
+    match /wallet_transactions/{txId} {
+      allow read, write: if false;
+    }
+
+    // ── Students — HARD LOCK ────────────────────────────────────
+    // Contains passwordHash, email, className. Never exposed to client SDK.
+    // Login, profile, register flows all go through /api/student-auth/*.
+    match /students/{studentId} {
+      allow read, write: if false;
+    }
+
+    // ── Settings — mostly public read, no client writes ─────────
+    // app-config drives the geolocation gate; pickup-slots drives the cart
+    // time picker. Reads must remain open so unauthenticated home page can
+    // fetch pickup slots. Writes go through admin API only.
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ── Push subscriptions ─────────────────────────────────────
+    match /push_subscriptions/{subId} {
+      allow read, write: if false;
+    }
+
+    // ── Analytics snapshots (daily reconciliation freezes) ─────
+    // Read requires admin bearer. Writes only via server.
+    match /reconciliation/{dateId} {
+      allow read: if isAdminBearer();
+      allow write: if false;
+    }
+
+    // ── Default deny ────────────────────────────────────────────
+    // Any collection not explicitly listed above is closed. New collections
+    // must be added here with an explicit policy — no accidental exposure.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+
+  // Transitional: admin panel currently listens to /orders via the client
+  // SDK without Firebase auth. Until that listener is migrated to a server
+  // stream, allow `list` on orders when the request originates from an
+  // admin-authenticated context. This function must be updated when we
+  // switch admins to Firebase custom tokens.
+  //
+  // For now it returns false — deploy this file only AFTER migrating the
+  // admin listener, or leave allow list = if true; during the interim
+  // window and note the exception in the security audit.
+  function isAdminBearer() {
+    // Placeholder: requires Firebase Auth custom claim `admin == true`.
+    // When admins are issued Firebase custom tokens, this becomes:
+    //   return request.auth != null && request.auth.token.admin == true;
+    return request.auth != null && request.auth.token.admin == true;
+  }
+}

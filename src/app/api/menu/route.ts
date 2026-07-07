@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { getSession } from "@/lib/auth";
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+          "Cache-Control": "public, s-maxage=600, stale-while-revalidate=3600",
         },
       });
     }
@@ -92,8 +93,11 @@ export async function POST(req: NextRequest) {
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    // Invalidate menu cache after adding a new item
+    // Invalidate in-memory cache + purge the edge/CDN cache so the new item
+    // appears on the very first paint. (The customer view's realtime listener
+    // corrects any staleness within ~1s regardless, so this is best-effort.)
     invalidateMenuCache();
+    try { revalidatePath("/api/menu"); } catch {}
 
     return NextResponse.json({ id: ref.id }, { status: 201 });
   } catch (err) {

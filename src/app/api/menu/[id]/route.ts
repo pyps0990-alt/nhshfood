@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { adminDb } from "@/lib/firebase-admin";
 import { getSession } from "@/lib/auth";
 import { invalidateMenuCache } from "@/lib/menu-cache";
@@ -52,8 +53,9 @@ export async function PATCH(
 
     await adminDb.collection("menuItems").doc(id).update(update);
 
-    // Invalidate menu cache after updating
+    // Invalidate in-memory cache + purge the edge/CDN cache
     invalidateMenuCache();
+    try { revalidatePath("/api/menu"); } catch {}
 
     return NextResponse.json({ id, ...update });
   } catch (err) {
@@ -79,6 +81,7 @@ export async function DELETE(
 
     await adminDb.collection("menuItems").doc(id).delete();
     invalidateMenuCache();
+    try { revalidatePath("/api/menu"); } catch {}
 
     return NextResponse.json({ id, deleted: true });
   } catch (err) {
