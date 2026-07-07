@@ -32,6 +32,30 @@ export async function GET() {
   }
 }
 
+// DELETE: remove a student by doc id (admin only)
+export async function DELETE(req: NextRequest) {
+  try {
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "未授權" }, { status: 401 });
+    }
+
+    const { searchParams } = req.nextUrl;
+    const id = searchParams.get("id");
+    if (!id) {
+      return NextResponse.json({ error: "缺少學生 id" }, { status: 400 });
+    }
+
+    await adminDb.collection("students").doc(id).delete();
+    invalidateRosterCache();
+
+    return NextResponse.json({ message: "已刪除" });
+  } catch (err) {
+    console.error("DELETE /api/students error:", err);
+    return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
+  }
+}
+
 // POST: bulk upload students (admin only)
 export async function POST(req: NextRequest) {
   try {

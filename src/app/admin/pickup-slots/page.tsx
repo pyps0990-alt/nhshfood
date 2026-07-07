@@ -81,25 +81,25 @@ export default function PickupSlotsPage() {
 
   function SlotEditor({ dept, label }: { dept: "breakfast" | "lunch"; label: string }) {
     return (
-      <div className="bg-white border border-stone-200 rounded-2xl p-5">
-        <h3 className="text-lg font-bold text-stone-800 mb-4">{label}</h3>
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-2xl p-5">
+        <h3 className="text-lg font-bold text-stone-800 dark:text-stone-200 mb-4">{label}</h3>
         <div className="flex flex-wrap gap-2 mb-4">
           {slots![dept].map((slot, i) => (
             <div
               key={`${slot}-${i}`}
-              className="flex items-center gap-1 bg-stone-50 border border-stone-200 rounded-xl px-3 py-1.5 text-sm"
+              className="flex items-center gap-1 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-1.5 text-sm"
             >
               <button
                 onClick={() => moveSlot(dept, i, -1)}
-                className="text-stone-400 hover:text-stone-600 text-xs"
+                className="text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 text-xs"
                 title="往前"
               >
                 ◀
               </button>
-              <span className="font-medium text-stone-700 mx-1">{slot}</span>
+              <span className="font-medium text-stone-700 dark:text-stone-300 mx-1">{slot}</span>
               <button
                 onClick={() => moveSlot(dept, i, 1)}
-                className="text-stone-400 hover:text-stone-600 text-xs"
+                className="text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 text-xs"
                 title="往後"
               >
                 ▶
@@ -122,7 +122,7 @@ export default function PickupSlotsPage() {
             onChange={(e) => setNewSlot({ ...newSlot, [dept]: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSlot(dept))}
             placeholder="新增時段，例：12:15"
-            className="flex-1 px-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+            className="flex-1 px-4 py-2.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
           />
           <button
             onClick={() => addSlot(dept)}
@@ -138,25 +138,25 @@ export default function PickupSlotsPage() {
   return (
     <main className="flex-1 px-4 py-6 max-w-xl mx-auto w-full">
       <div className="flex items-center gap-3 mb-6">
-        <BackButton href="/admin" />
-        <h1 className="text-2xl font-bold text-stone-900">取餐時段設定</h1>
+        <BackButton href="/admin/hub" />
+        <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">取餐時段設定</h1>
       </div>
 
       <div className="space-y-5">
-        <SlotEditor dept="breakfast" label="🥪 早餐部時段" />
-        <SlotEditor dept="lunch" label="🍱 午餐部時段" />
+        <SlotEditor dept="breakfast" label="早餐部時段" />
+        <SlotEditor dept="lunch" label="午餐部時段" />
       </div>
 
       <div className="mt-6 flex items-center gap-4">
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 bg-[#E23D28] hover:bg-[#c9321f] text-white rounded-2xl px-6 py-3.5 font-bold shadow-lg shadow-red-200/50 transition-all disabled:opacity-50"
+          className="flex-1 bg-[#E23D28] hover:bg-[#c9321f] text-white rounded-2xl px-6 py-3.5 font-bold shadow-lg shadow-red-200/50 dark:shadow-red-950/50 transition-all disabled:opacity-50"
         >
           {saving ? "儲存中..." : "儲存設定"}
         </button>
         {message && (
-          <span className={`text-sm font-medium ${message.includes("成功") ? "text-green-600" : "text-red-600"}`}>
+          <span className={`text-sm font-medium ${message.includes("成功") ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
             {message}
           </span>
         )}

@@ -140,7 +140,7 @@ export default function AdminMenuPage() {
   return (
     <div className="flex-1 flex flex-col">
       <header className="bg-stone-900 text-white px-5 py-4 flex items-center gap-3">
-        <BackButton href="/admin" variant="light" />
+        <BackButton href="/admin/hub" variant="light" />
         <h1 className="text-lg font-bold tracking-tight">菜單管理</h1>
         <button onClick={() => { resetForm(); setShowForm(!showForm); }}
           className="ml-auto flex items-center gap-1.5 text-sm bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl font-semibold transition-colors">
@@ -151,29 +151,29 @@ export default function AdminMenuPage() {
         </button>
       </header>
 
-      <div className="flex gap-2 px-5 py-4 border-b border-stone-100">
+      <div className="flex gap-2 px-5 py-4 border-b border-stone-100 dark:border-stone-800">
         {["breakfast", "lunch"].map((d) => (
           <button key={d} onClick={() => setDept(d)}
-            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${dept === d ? "bg-stone-900 text-white shadow-md" : "bg-stone-100 text-stone-600 hover:bg-stone-200"}`}>
+            className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${dept === d ? "bg-stone-900 text-white shadow-md dark:bg-stone-100 dark:text-stone-900" : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"}`}>
             {d === "breakfast" ? "早餐部" : "午餐部"}
           </button>
         ))}
-        <span className="ml-auto text-sm text-stone-400 self-center">{items.length} 項品項</span>
+        <span className="ml-auto text-sm text-stone-400 dark:text-stone-500 self-center">{items.length} 項品項</span>
       </div>
 
       {/* Add / Edit form */}
       {showForm && (
-        <div className="px-5 py-5 bg-gradient-to-b from-stone-50 to-white border-b border-stone-200 animate-fade-in">
+        <div className="px-5 py-5 bg-gradient-to-b from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 border-b border-stone-200 dark:border-stone-700 animate-fade-in">
           <div className="flex items-center gap-2 mb-5">
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${editing ? "bg-blue-500" : "bg-emerald-500"}`}>
               {editing ? "✎" : "+"}
             </div>
-            <h2 className="font-bold text-stone-800 text-lg">{editing ? "編輯品項" : "新增品項"}</h2>
+            <h2 className="font-bold text-stone-800 dark:text-stone-200 text-lg">{editing ? "編輯品項" : "新增品項"}</h2>
           </div>
 
           {/* Error message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 font-medium animate-fade-in">
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 font-medium animate-fade-in">
               {error}
             </div>
           )}
@@ -184,7 +184,7 @@ export default function AdminMenuPage() {
               <div
                 onClick={() => fileRef.current?.click()}
                 className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all shrink-0 ${
-                  imageUrl ? "border-transparent" : "border-stone-300 hover:border-stone-400 bg-stone-50"
+                  imageUrl ? "border-transparent" : "border-stone-300 hover:border-stone-400 bg-stone-50 dark:border-stone-600 dark:hover:border-stone-500 dark:bg-stone-800"
                 }`}
               >
                 {uploading ? (
@@ -196,7 +196,7 @@ export default function AdminMenuPage() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
                     </svg>
-                    <span className="text-[10px] text-stone-400 mt-1 block">上傳圖片</span>
+                    <span className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 block">上傳圖片</span>
                   </div>
                 )}
               </div>
@@ -208,25 +208,25 @@ export default function AdminMenuPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="品名（必填）"
                   required
-                  className="w-full px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                  className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-medium dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
                 />
                 <div className="flex gap-2">
                   <div className="relative w-1/2">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 text-sm">$</span>
                     <input
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       placeholder="價格"
                       type="number"
                       required
-                      className="w-full pl-7 pr-4 py-3 bg-white border border-stone-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                      className="w-full pl-7 pr-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-medium dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
                     />
                   </div>
                   <input
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="描述（選填）"
-                    className="w-1/2 px-4 py-3 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                    className="w-1/2 px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
                   />
                 </div>
               </div>
@@ -234,20 +234,20 @@ export default function AdminMenuPage() {
 
             {/* Category — quick select or type */}
             <div>
-              <label className="block text-xs font-semibold text-stone-500 mb-2">分類</label>
+              <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-2">分類</label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {existingCategories.map((c) => (
                   <button key={c} type="button" onClick={() => setCategory(c)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                       category === c
-                        ? "bg-stone-900 text-white border-stone-900"
-                        : "bg-white text-stone-600 border-stone-200 hover:border-stone-400"
+                        ? "bg-stone-900 text-white border-stone-900 dark:bg-stone-100 dark:text-stone-900 dark:border-stone-100"
+                        : "bg-white text-stone-600 border-stone-200 hover:border-stone-400 dark:bg-stone-800 dark:text-stone-400 dark:border-stone-700 dark:hover:border-stone-500"
                     }`}>
                     {c}
                   </button>
                 ))}
                 <button type="button" onClick={() => setCategory("")}
-                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-stone-300 text-stone-400 hover:text-stone-600 hover:border-stone-400 transition-all">
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-dashed border-stone-300 dark:border-stone-600 text-stone-400 hover:text-stone-600 hover:border-stone-400 dark:hover:text-stone-300 dark:hover:border-stone-500 transition-all">
                   + 自訂
                 </button>
               </div>
@@ -257,21 +257,21 @@ export default function AdminMenuPage() {
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="輸入分類名稱（如：主食、飲料）"
                   required
-                  className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                  className="w-full px-4 py-2.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
                 />
               )}
             </div>
 
             {/* Tags */}
             <div>
-              <label className="block text-xs font-semibold text-stone-500 mb-2">特殊標籤</label>
+              <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-2">特殊標籤</label>
               <div className="flex flex-wrap gap-2">
                 {ALL_TAGS.map((tag) => (
                   <button key={tag} type="button" onClick={() => toggleTag(tag)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
                       tags.includes(tag)
                         ? MENU_TAG_COLORS[tag] + " border-transparent shadow-sm"
-                        : "bg-white text-stone-500 border-stone-200 hover:border-stone-400"
+                        : "bg-white text-stone-500 border-stone-200 hover:border-stone-400 dark:bg-stone-800 dark:text-stone-400 dark:border-stone-700 dark:hover:border-stone-500"
                     }`}>
                     {MENU_TAG_LABELS[tag]}
                   </button>
@@ -281,13 +281,13 @@ export default function AdminMenuPage() {
 
             {/* Stock */}
             <div>
-              <label className="block text-xs font-semibold text-stone-500 mb-2">庫存管理</label>
+              <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-2">庫存管理</label>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => { setStockEnabled(!stockEnabled); if (stockEnabled) setStockQty(""); }}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${stockEnabled ? "bg-emerald-500" : "bg-stone-200"}`}>
+                  className={`relative w-11 h-6 rounded-full transition-colors ${stockEnabled ? "bg-emerald-500" : "bg-stone-200 dark:bg-stone-700"}`}>
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${stockEnabled ? "translate-x-5" : ""}`} />
                 </button>
-                <span className="text-sm text-stone-600">{stockEnabled ? "限量供應" : "不限量"}</span>
+                <span className="text-sm text-stone-600 dark:text-stone-400">{stockEnabled ? "限量供應" : "不限量"}</span>
                 {stockEnabled && (
                   <input
                     value={stockQty}
@@ -295,7 +295,7 @@ export default function AdminMenuPage() {
                     placeholder="數量"
                     type="number"
                     min="0"
-                    className="w-24 px-3 py-2 bg-white border border-stone-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                    className="w-24 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-medium dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
                   />
                 )}
               </div>
@@ -316,7 +316,7 @@ export default function AdminMenuPage() {
                 {saving ? "儲存中..." : editing ? "更新品項" : "新增品項"}
               </button>
               <button type="button" onClick={resetForm}
-                className="px-6 py-3 rounded-xl text-sm font-medium text-stone-600 bg-stone-100 hover:bg-stone-200 transition-colors">
+                className="px-6 py-3 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
                 取消
               </button>
             </div>
@@ -328,16 +328,22 @@ export default function AdminMenuPage() {
       <main className="flex-1 px-5 py-4 space-y-6 pb-8">
         {items.length === 0 && (
           <div className="text-center mt-16 space-y-3">
-            <p className="text-4xl">{dept === "breakfast" ? "🥪" : "🍱"}</p>
-            <p className="text-stone-400">沒有品項，點右上角新增</p>
+            <div className="flex justify-center">
+              {dept === "breakfast" ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-300 dark:text-stone-600"><path d="M3 11h18M3 11v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 11l1.5-5A2 2 0 0 1 6.4 4.5h11.2a2 2 0 0 1 1.9 1.5L21 11"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-300 dark:text-stone-600"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z"/><path d="M8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 8 15 8"/></svg>
+              )}
+            </div>
+            <p className="text-stone-400 dark:text-stone-500">沒有品項，點右上角新增</p>
           </div>
         )}
 
         {Object.entries(grouped).map(([cat, catItems]) => (
           <div key={cat}>
-            <h3 className="text-sm font-bold text-stone-500 mb-2 flex items-center gap-2">
+            <h3 className="text-sm font-bold text-stone-500 dark:text-stone-400 mb-2 flex items-center gap-2">
               <span>{cat}</span>
-              <span className="text-xs font-normal text-stone-400">{catItems.length} 項</span>
+              <span className="text-xs font-normal text-stone-400 dark:text-stone-500">{catItems.length} 項</span>
             </h3>
             <div className="space-y-2">
               {catItems.map((item) => (
@@ -346,13 +352,17 @@ export default function AdminMenuPage() {
                   {item.imageUrl ? (
                     <img src={item.imageUrl} alt={item.name} className="w-14 h-14 rounded-xl object-cover shrink-0" />
                   ) : (
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 flex items-center justify-center text-xl shrink-0">
-                      {dept === "breakfast" ? "🥪" : "🍱"}
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 flex items-center justify-center shrink-0">
+                      {dept === "breakfast" ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 dark:text-stone-500"><path d="M3 11h18M3 11v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 11l1.5-5A2 2 0 0 1 6.4 4.5h11.2a2 2 0 0 1 1.9 1.5L21 11"/></svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 dark:text-stone-500"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z"/><path d="M8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 8 15 8"/></svg>
+                      )}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold truncate text-stone-900">{item.name}</span>
+                      <span className="font-semibold truncate text-stone-900 dark:text-stone-100">{item.name}</span>
                       {(item.tags || []).map((tag) => (
                         <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${MENU_TAG_COLORS[tag]}`}>
                           {MENU_TAG_LABELS[tag]}
@@ -365,8 +375,8 @@ export default function AdminMenuPage() {
                         <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-md shrink-0 font-bold">停售</span>
                       )}
                     </div>
-                    <p className="text-sm text-stone-500 mt-0.5">
-                      <span className="font-semibold text-stone-700">${item.price}</span>
+                    <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">
+                      <span className="font-semibold text-stone-700 dark:text-stone-300">${item.price}</span>
                       {item.stock !== null && item.stock !== undefined && (
                         <span className="ml-1.5 text-xs">庫存: {item.stock}</span>
                       )}
@@ -376,12 +386,12 @@ export default function AdminMenuPage() {
                   <div className="flex gap-1 shrink-0">
                     {item.stock !== null && item.stock !== undefined && (
                       <button onClick={() => resetStock(item)}
-                        className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center hover:bg-amber-100 transition-colors text-xs font-bold">
+                        className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 flex items-center justify-center hover:bg-amber-100 dark:hover:bg-amber-950/50 transition-colors text-xs font-bold">
                         補
                       </button>
                     )}
                     <button onClick={() => startEdit(item)}
-                      className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100 transition-colors">
+                      className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400 flex items-center justify-center hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                         <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -390,8 +400,8 @@ export default function AdminMenuPage() {
                     <button onClick={() => toggleAvailable(item)}
                       className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
                         item.available
-                          ? "bg-red-50 text-red-500 hover:bg-red-100"
-                          : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100"
+                          ? "bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-950/50"
+                          : "bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-950/50"
                       }`}>
                       {item.available ? (
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -404,7 +414,7 @@ export default function AdminMenuPage() {
                       )}
                     </button>
                     <button onClick={() => handleDelete(item)}
-                      className="w-9 h-9 rounded-xl bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-100 transition-colors">
+                      className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-500 dark:text-red-400 flex items-center justify-center hover:bg-red-100 dark:hover:bg-red-950/50 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
                       </svg>

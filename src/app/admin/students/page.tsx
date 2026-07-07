@@ -24,6 +24,8 @@ export default function StudentsPage() {
   // Single add form
   const [form, setForm] = useState({ className: "", studentId: "", studentName: "", email: "" });
   const [adding, setAdding] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchStudents();
@@ -130,6 +132,22 @@ export default function StudentsPage() {
     }
   }
 
+  async function handleDelete(id: string) {
+    setDeletingId(id);
+    setError("");
+    try {
+      const res = await fetch(`/api/students?id=${encodeURIComponent(id)}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("刪除失敗");
+      setStudents((prev) => prev.filter((s) => s.id !== id));
+      setMessage("已刪除 1 筆學生資料");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "刪除失敗");
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  }
+
   const grouped = students.reduce<Record<string, Student[]>>((acc, s) => {
     (acc[s.className] = acc[s.className] || []).push(s);
     return acc;
@@ -138,7 +156,7 @@ export default function StudentsPage() {
   return (
     <div className="flex-1 flex flex-col">
       <header className="bg-stone-900 text-white px-5 py-4 flex items-center gap-3">
-        <BackButton href="/admin" variant="light" />
+        <BackButton href="/admin/hub" variant="light" />
         <h1 className="text-lg font-bold tracking-tight">學生名冊管理</h1>
         <span className="ml-auto text-sm text-stone-400">{students.length} 筆資料</span>
       </header>
@@ -146,8 +164,8 @@ export default function StudentsPage() {
       <main className="flex-1 px-5 py-6 space-y-6 pb-10">
         {/* CSV Upload */}
         <div className="card-premium p-5 space-y-4">
-          <h2 className="font-bold text-stone-800">批次匯入（CSV）</h2>
-          <p className="text-sm text-stone-500">CSV 格式：<code className="bg-stone-100 px-2 py-0.5 rounded text-xs">班級,座號,姓名,Email</code></p>
+          <h2 className="font-bold text-stone-800 dark:text-stone-200">批次匯入（CSV）</h2>
+          <p className="text-sm text-stone-500 dark:text-stone-400">CSV 格式：<code className="bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded text-xs">班級,座號,姓名,Email</code></p>
           <div className="flex items-center gap-3">
             <input
               ref={fileRef}
@@ -160,10 +178,10 @@ export default function StudentsPage() {
 
           {csvPreview.length > 0 && (
             <div className="space-y-3">
-              <p className="text-sm font-medium text-stone-700">預覽（{csvPreview.length} 筆）：</p>
-              <div className="max-h-48 overflow-y-auto border border-stone-200 rounded-xl">
-                <table className="w-full text-xs">
-                  <thead className="bg-stone-50 sticky top-0">
+              <p className="text-sm font-medium text-stone-700 dark:text-stone-300">預覽（{csvPreview.length} 筆）：</p>
+              <div className="max-h-48 overflow-y-auto border border-stone-200 dark:border-stone-700 rounded-xl">
+                <table className="w-full text-xs dark:text-stone-300">
+                  <thead className="bg-stone-50 dark:bg-stone-800 sticky top-0">
                     <tr>
                       <th className="px-3 py-2 text-left">班級</th>
                       <th className="px-3 py-2 text-left">座號</th>
@@ -173,7 +191,7 @@ export default function StudentsPage() {
                   </thead>
                   <tbody>
                     {csvPreview.slice(0, 20).map((s, i) => (
-                      <tr key={i} className="border-t border-stone-100">
+                      <tr key={i} className="border-t border-stone-100 dark:border-stone-800">
                         <td className="px-3 py-1.5">{s.className}</td>
                         <td className="px-3 py-1.5">{s.studentId}</td>
                         <td className="px-3 py-1.5">{s.studentName}</td>
@@ -181,7 +199,7 @@ export default function StudentsPage() {
                       </tr>
                     ))}
                     {csvPreview.length > 20 && (
-                      <tr><td colSpan={4} className="px-3 py-2 text-stone-400 text-center">...還有 {csvPreview.length - 20} 筆</td></tr>
+                      <tr><td colSpan={4} className="px-3 py-2 text-stone-400 dark:text-stone-500 text-center">...還有 {csvPreview.length - 20} 筆</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -199,16 +217,16 @@ export default function StudentsPage() {
 
         {/* Single add */}
         <div className="card-premium p-5 space-y-4">
-          <h2 className="font-bold text-stone-800">單筆新增</h2>
+          <h2 className="font-bold text-stone-800 dark:text-stone-200">單筆新增</h2>
           <div className="grid grid-cols-2 gap-3">
             <input placeholder="班級（如 206）" value={form.className} onChange={(e) => setForm({ ...form, className: e.target.value })}
-              className="px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-300" />
+              className="px-3 py-2.5 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:bg-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-300" />
             <input placeholder="座號（如 20）" value={form.studentId} onChange={(e) => setForm({ ...form, studentId: e.target.value })}
-              className="px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-300" />
+              className="px-3 py-2.5 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:bg-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-300" />
             <input placeholder="姓名" value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })}
-              className="px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-300" />
+              className="px-3 py-2.5 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:bg-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-300" />
             <input placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="px-3 py-2.5 border border-stone-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-stone-300" />
+              className="px-3 py-2.5 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:bg-stone-800 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-300" />
           </div>
           <button onClick={addSingle} disabled={adding}
             className="px-6 py-2.5 bg-stone-900 text-white rounded-xl text-sm font-semibold hover:bg-stone-800 disabled:opacity-50 transition-colors">
@@ -216,27 +234,50 @@ export default function StudentsPage() {
           </button>
         </div>
 
-        {message && <p className="text-emerald-600 text-sm font-medium bg-emerald-50 px-4 py-3 rounded-xl">{message}</p>}
-        {error && <p className="text-red-600 text-sm font-medium bg-red-50 px-4 py-3 rounded-xl">{error}</p>}
+        {message && <p className="text-emerald-600 dark:text-emerald-400 text-sm font-medium bg-emerald-50 dark:bg-emerald-950/30 px-4 py-3 rounded-xl">{message}</p>}
+        {error && <p className="text-red-600 dark:text-red-400 text-sm font-medium bg-red-50 dark:bg-red-950/30 px-4 py-3 rounded-xl">{error}</p>}
 
         {/* Student list */}
         <div className="card-premium p-5 space-y-4">
-          <h2 className="font-bold text-stone-800">目前名冊</h2>
+          <h2 className="font-bold text-stone-800 dark:text-stone-200">目前名冊</h2>
           {loading ? (
-            <p className="text-stone-400 text-sm">載入中...</p>
+            <p className="text-stone-400 dark:text-stone-500 text-sm">載入中...</p>
           ) : students.length === 0 ? (
-            <p className="text-stone-400 text-sm">尚無學生資料，請匯入 CSV 或單筆新增</p>
+            <p className="text-stone-400 dark:text-stone-500 text-sm">尚無學生資料，請匯入 CSV 或單筆新增</p>
           ) : (
             <div className="space-y-4">
               {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([cls, studs]) => (
                 <div key={cls}>
-                  <p className="text-sm font-bold text-stone-700 mb-2">{cls} 班（{studs.length} 人）</p>
+                  <p className="text-sm font-bold text-stone-700 dark:text-stone-300 mb-2">{cls} 班（{studs.length} 人）</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                    {studs.sort((a, b) => a.studentId.localeCompare(b.studentId)).map((s, i) => (
-                      <div key={i} className="flex items-center gap-3 text-xs text-stone-600 bg-stone-50 px-3 py-2 rounded-lg">
-                        <span className="font-mono font-semibold text-stone-800 shrink-0">{s.studentId}</span>
-                        <span className="font-medium text-stone-700 shrink-0">{s.studentName}</span>
-                        <span className="text-stone-400 ml-auto truncate text-right">{s.email}</span>
+                    {studs.sort((a, b) => a.studentId.localeCompare(b.studentId)).map((s) => (
+                      <div key={s.id} className="flex items-center gap-3 text-xs text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-800 px-3 py-2 rounded-lg">
+                        <span className="font-mono font-semibold text-stone-800 dark:text-stone-200 shrink-0">{s.studentId}</span>
+                        <span className="font-medium text-stone-700 dark:text-stone-300 shrink-0">{s.studentName}</span>
+                        <span className="text-stone-400 dark:text-stone-500 ml-auto truncate text-right">{s.email}</span>
+                        {s.id && (
+                          confirmDeleteId === s.id ? (
+                            <span className="flex items-center gap-1 shrink-0">
+                              <button
+                                onClick={() => handleDelete(s.id!)}
+                                disabled={deletingId === s.id}
+                                className="px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded-md text-[11px] font-semibold disabled:opacity-50 transition-colors"
+                              >{deletingId === s.id ? "刪除中" : "確認"}</button>
+                              <button
+                                onClick={() => setConfirmDeleteId(null)}
+                                className="px-2 py-1 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-600 dark:text-stone-300 rounded-md text-[11px] transition-colors"
+                              >取消</button>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDeleteId(s.id!)}
+                              className="shrink-0 text-red-400 hover:text-red-500 transition-colors"
+                              aria-label="刪除"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                            </button>
+                          )
+                        )}
                       </div>
                     ))}
                   </div>

@@ -4,15 +4,14 @@ import Link from "next/link";
 
 interface BackButtonProps {
   href: string;
-  /** "light" for colored headers, "dark" for white/neutral headers */
   variant?: "light" | "dark";
 }
 
 export function BackButton({ href, variant = "dark" }: BackButtonProps) {
-  const base = "w-9 h-9 flex items-center justify-center rounded-full transition-colors shrink-0";
+  const base = "w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 shrink-0 active:scale-90";
   const style = variant === "light"
-    ? `${base} bg-white/20 hover:bg-white/30 text-white`
-    : `${base} bg-stone-100 hover:bg-stone-200 text-stone-600`;
+    ? `${base} bg-white/20 hover:bg-white/30 active:bg-white/40 text-white`
+    : `${base} bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 active:bg-stone-300 dark:active:bg-stone-600 text-stone-600 dark:text-stone-400`;
 
   return (
     <Link href={href} className={style}>
