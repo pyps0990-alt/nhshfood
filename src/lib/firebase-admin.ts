@@ -4,8 +4,19 @@ import { getFirestore } from "firebase-admin/firestore";
 let app: App;
 
 if (getApps().length === 0) {
-  // Option 1: Use service account JSON (recommended for production)
-  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  // Option 1a: base64-encoded service account JSON. Preferred for envs like
+  // code-server / Docker where multi-line quoted JSON in .env gets mangled.
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_B64) {
+    const decoded = Buffer.from(
+      process.env.FIREBASE_SERVICE_ACCOUNT_B64,
+      "base64"
+    ).toString("utf8");
+    const serviceAccount = JSON.parse(decoded);
+    app = initializeApp({
+      credential: cert(serviceAccount),
+    });
+  } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    // Option 1b: raw JSON service account (must be on a single line)
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     app = initializeApp({
       credential: cert(serviceAccount),
