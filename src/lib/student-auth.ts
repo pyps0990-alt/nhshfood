@@ -23,7 +23,14 @@ export const useStudentAuth = create<StudentAuthState>()(
     (set) => ({
       student: null,
       setStudent: (student) => set({ student }),
-      logout: () => set({ student: null }),
+      logout: () => {
+        // Clear the server-side session cookie too — clearing localStorage
+        // alone would leave the httpOnly cookie valid on the server.
+        if (typeof fetch !== "undefined") {
+          fetch("/api/student-auth/logout", { method: "POST" }).catch(() => {});
+        }
+        set({ student: null });
+      },
     }),
     {
       name: "nhsh-student",

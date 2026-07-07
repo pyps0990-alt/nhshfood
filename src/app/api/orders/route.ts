@@ -7,6 +7,7 @@ import { orderCircuitBreaker } from "@/lib/circuit-breaker";
 import { isWithinSchool } from "@/lib/geo";
 import { z } from "zod";
 import { sendOrderNotification } from "@/lib/mailer";
+import { getStudentSession } from "@/lib/auth";
 
 const createOrderSchema = z.object({
   studentId: z.string().min(1).max(20).trim(),
@@ -68,24 +69,38 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Identity must come from the session cookie, NOT the request body.
+    // Trusting body.studentId would let anyone place orders as anyone else
+    // via a simple localStorage edit + cash payment.
+    const session = await getStudentSession();
+    if (!session) {
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+
     const body = await req.json();
     const parsed = createOrderSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const data = parsed.data;
+    // Override any client-supplied studentId with the authenticated one.
+    const data = { ...parsed.data, studentId: session.studentId };
 
-    // Verify student is registered
-    if (data.studentId) {
-      const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
-      if (!studentDoc.exists) {
-        return NextResponse.json(
-          { error: "學生身分未驗證，請先註冊帳號" },
-          { status: 403 }
-        );
-      }
+    // Verify the authenticated student's record still exists (e.g. wasn't
+    // deleted mid-session by admin).
+    const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
+    if (!studentDoc.exists) {
+      return NextResponse.json(
+        { error: "帳號不存在或已被停用" },
+        { status: 403 }
+      );
     }
+    // Also override display fields from the server-side record so a
+    // spoofed studentName / className in the body can't attach false
+    // labels to the receipt.
+    const authoritative = studentDoc.data()!;
+    data.studentName = authoritative.studentName || data.studentName || null;
+    data.className = authoritative.className || data.className || null;
 
     // Location gate: always read the *current* app-config on the server so an
     // admin toggling `requireLocation` takes effect on the very next order,

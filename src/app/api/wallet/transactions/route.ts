@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { getSession } from "@/lib/auth";
+import { getSession, getStudentSession } from "@/lib/auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -43,10 +43,21 @@ export async function GET(req: NextRequest) {
   const format = req.nextUrl.searchParams.get("format") || "json";
 
   // CSV export is admin-only (contains full history for refund reconciliation).
+  const adminSession = await getSession();
   if (format === "csv") {
-    const session = await getSession();
-    if (!session) {
+    if (!adminSession) {
       return NextResponse.json({ error: "請先登入管理員帳號" }, { status: 401 });
+    }
+  } else {
+    // JSON reads: caller can only see own transactions (unless admin).
+    if (!adminSession) {
+      const studentSession = await getStudentSession();
+      if (!studentSession) {
+        return NextResponse.json({ error: "請先登入" }, { status: 401 });
+      }
+      if (studentSession.studentId !== parsed.data.studentId) {
+        return NextResponse.json({ error: "無權查詢他人交易紀錄" }, { status: 403 });
+      }
     }
   }
 

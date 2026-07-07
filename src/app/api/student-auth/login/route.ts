@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { createStudentToken, studentCookieOptions, STUDENT_COOKIE_NAME } from "@/lib/auth";
 
 const loginSchema = z.object({
   studentId: z.string().min(1).max(20).trim(),
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "學號或密碼錯誤" }, { status: 401 });
     }
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       id: doc.id,
       studentId: data.studentId,
       className: data.className,
@@ -49,6 +50,9 @@ export async function POST(req: NextRequest) {
       displayName: data.displayName || "",
       email: data.email,
     });
+    const token = await createStudentToken(data.studentId);
+    res.cookies.set(STUDENT_COOKIE_NAME, token, studentCookieOptions());
+    return res;
   } catch (err) {
     console.error("POST /api/student-auth/login error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });

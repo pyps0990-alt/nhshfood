@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { getSession } from "@/lib/auth";
+import { getSession, getStudentSession } from "@/lib/auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -82,6 +82,20 @@ export async function GET(req: NextRequest) {
   const parsed = querySchema.safeParse({ studentId });
   if (!parsed.success) {
     return NextResponse.json({ error: "請提供有效的學號" }, { status: 400 });
+  }
+
+  // Callers can only query their own wallet. Admins can query any wallet
+  // (used by /admin/wallet's per-student detail view). Anonymous callers
+  // are rejected outright.
+  const studentSession = await getStudentSession();
+  const adminSession = await getSession();
+  if (!adminSession) {
+    if (!studentSession) {
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
+    }
+    if (studentSession.studentId !== parsed.data.studentId) {
+      return NextResponse.json({ error: "無權查詢他人錢包" }, { status: 403 });
+    }
   }
 
   try {

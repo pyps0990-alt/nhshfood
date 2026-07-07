@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { createStudentToken, studentCookieOptions, STUDENT_COOKIE_NAME } from "@/lib/auth";
 
 const passwordSchema = z
   .string()
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
 
     await adminDb.collection("students").doc(docId).set(doc);
 
-    return NextResponse.json({
+    const res = NextResponse.json({
       id: docId,
       studentId,
       className,
@@ -82,6 +83,9 @@ export async function POST(req: NextRequest) {
       displayName: displayName || "",
       email,
     }, { status: 201 });
+    const token = await createStudentToken(studentId);
+    res.cookies.set(STUDENT_COOKIE_NAME, token, studentCookieOptions());
+    return res;
   } catch (err) {
     console.error("POST /api/student-auth/register error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
