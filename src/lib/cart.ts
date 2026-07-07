@@ -9,8 +9,7 @@ interface CartState {
   remove: (menuItemId: string) => void;
   updateQty: (menuItemId: string, qty: number) => void;
   clear: () => void;
-  total: () => number;
-  count: () => number;
+  clearDept: (dept: string) => void;
 }
 
 export const useCart = create<CartState>()(
@@ -21,16 +20,12 @@ export const useCart = create<CartState>()(
 
       add: (menuItem, dept) => {
         const state = get();
-        if (state.department && state.department !== dept) {
-          set({ department: dept, items: [{ menuItem, quantity: 1 }] });
-          return;
-        }
-        const existing = state.items.find((i) => i.menuItem.id === menuItem.id);
+        const existing = state.items.find((i) => i.menuItem.id === menuItem.id && i.department === dept);
         if (existing) {
           set({
             department: dept,
             items: state.items.map((i) =>
-              i.menuItem.id === menuItem.id
+              i.menuItem.id === menuItem.id && i.department === dept
                 ? { ...i, quantity: i.quantity + 1 }
                 : i
             ),
@@ -38,16 +33,19 @@ export const useCart = create<CartState>()(
         } else {
           set({
             department: dept,
-            items: [...state.items, { menuItem, quantity: 1 }],
+            items: [...state.items, { menuItem, quantity: 1, department: dept }],
           });
         }
       },
 
       remove: (menuItemId) =>
-        set((s) => ({
-          items: s.items.filter((i) => i.menuItem.id !== menuItemId),
-          department: s.items.length <= 1 ? null : s.department,
-        })),
+        set((s) => {
+          const newItems = s.items.filter((i) => i.menuItem.id !== menuItemId);
+          return {
+            items: newItems,
+            department: newItems.length === 0 ? null : s.department,
+          };
+        }),
 
       updateQty: (menuItemId, qty) => {
         if (qty <= 0) {
@@ -63,9 +61,14 @@ export const useCart = create<CartState>()(
 
       clear: () => set({ items: [], department: null }),
 
-      total: () => get().items.reduce((s, i) => s + i.menuItem.price * i.quantity, 0),
-
-      count: () => get().items.reduce((s, i) => s + i.quantity, 0),
+      clearDept: (dept) =>
+        set((s) => {
+          const newItems = s.items.filter((i) => i.department !== dept);
+          return {
+            items: newItems,
+            department: newItems.length === 0 ? null : s.department,
+          };
+        }),
     }),
     {
       name: "nhsh-cart",

@@ -1,33 +1,31 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
+import { useRef, useEffect, useState, type ReactNode } from "react";
 
-export function PageTransition({ children }: { children: React.ReactNode }) {
+export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [displayChildren, setDisplayChildren] = useState(children);
-  const [phase, setPhase] = useState<"enter" | "idle">("enter");
   const prevPath = useRef(pathname);
+  const [entering, setEntering] = useState(false);
 
   useEffect(() => {
-    if (pathname !== prevPath.current) {
-      // New page — play enter animation
+    if (prevPath.current !== pathname) {
       prevPath.current = pathname;
-      setDisplayChildren(children);
-      setPhase("enter");
-      const t = setTimeout(() => setPhase("idle"), 350);
-      return () => clearTimeout(t);
-    } else {
-      setDisplayChildren(children);
+      setEntering(true);
+      const id = requestAnimationFrame(() => setEntering(false));
+      return () => cancelAnimationFrame(id);
     }
-  }, [pathname, children]);
+  }, [pathname]);
 
   return (
     <div
-      className={`flex-1 flex flex-col ${phase === "enter" ? "animate-page-enter" : ""}`}
-      key={pathname}
+      className="flex-1 flex flex-col"
+      style={{
+        viewTransitionName: "page-content",
+        animation: entering ? "page-enter 0.3s cubic-bezier(0.22, 1, 0.36, 1) both" : undefined,
+      }}
     >
-      {displayChildren}
+      {children}
     </div>
   );
 }
