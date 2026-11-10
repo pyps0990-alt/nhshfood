@@ -34,25 +34,23 @@ export function OrderLookup() {
   }
 
   return (
-    <div>
-      <p className="text-sm text-stone-500 dark:text-stone-400 mb-3 text-center">{t("order_lookup_title")}</p>
-      <form onSubmit={handleSubmit} className="flex gap-3">
+    <div className="lg-card p-4">
+      <p className="text-[13px] font-semibold lg-ink-2 mb-2.5 px-1">{t("order_lookup_title")}</p>
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"
+          inputMode="numeric"
           value={input}
           onChange={(e) => { setInput(e.target.value); setError(""); }}
           placeholder={t("order_lookup_placeholder")}
-          className="flex-1 px-5 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-300 dark:focus:ring-stone-600 focus:border-transparent shadow-sm transition-all"
+          aria-label={t("order_lookup_title")}
+          className="lg-field lg-pill flex-1 !min-h-[44px] text-[15px]"
         />
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-6 py-3 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 rounded-2xl text-sm font-semibold hover:bg-stone-800 dark:hover:bg-stone-200 shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-50"
-        >
-          {loading ? "..." : t("order_lookup_btn")}
+        <button type="submit" disabled={loading || !input.trim()} className="lg-btn lg-tinted shrink-0">
+          {loading ? "…" : t("order_lookup_btn")}
         </button>
       </form>
-      {error && <p className="text-red-500 text-xs mt-2 text-center">{error}</p>}
+      {error && <p className="text-red-500 text-xs mt-2 px-1" role="alert">{error}</p>}
     </div>
   );
 }

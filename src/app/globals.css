@@ -301,7 +301,7 @@ body {
   font-size: 0.875rem;
   background: var(--bg-page);
   color: var(--text-primary);
-  font-family: var(--font-geist), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -311,40 +311,6 @@ body {
 .dark {
   background: var(--bg-page);
   color: var(--text-primary);
-}
-
-.glass {
-  background: hsla(0, 0%, 100%, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-.dark .glass {
-  background: hsla(20, 6%, 12%, 0.85);
-}
-
-.card-premium {
-  background: var(--bg-card);
-  border: 1px solid hsl(20, 10%, 90%);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow 0.2s ease, background-color 0.3s ease, transform 0.2s ease;
-}
-@media (hover: hover) {
-  .card-premium:hover {
-    box-shadow: var(--shadow-md);
-    transform: translateY(-1px);
-  }
-}
-.dark .card-premium {
-  background: var(--bg-card);
-  border-color: hsl(20, 6%, 20%);
-  box-shadow: none;
-}
-@media (hover: hover) {
-  .dark .card-premium:hover {
-    background: var(--bg-elevated);
-    box-shadow: none;
-  }
 }
 
 /* === Button pressed states === */
@@ -394,12 +360,291 @@ button:not(:disabled) {
   transition: opacity 0.05s ease;
 }
 
-/* === Elevated surfaces in dark mode (modals, popovers) === */
-.dark .glass {
-  background: hsla(20, 6%, 16%, 0.92);
-}
-
 /* Dark mode input overrides */
 .dark input, .dark textarea, .dark select {
   color-scheme: dark;
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   LIQUID GLASS — design system (iOS 26/27-style material)
+   ────────────────────────────────────────────────────────────────────
+   Layers, back to front:
+     1. .lg-backdrop  fixed warm "wallpaper" (brand blobs) that the glass
+                      refracts. Without something behind it, glass is grey.
+     2. Surfaces      .lg (regular) / .lg-thin / .lg-thick / .lg-tinted
+     3. Controls      .lg-btn, .lg-pill, .lg-seg, .lg-field, .lg-chip
+   Every surface = translucent fill + backdrop blur/saturate + a 1px
+   specular rim (inset highlight) + a soft colour-aware drop shadow.
+   ════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-rounded: ui-rounded, "SF Pro Rounded", -apple-system, "PingFang TC", system-ui, sans-serif;
+
+  --brand: #E23D28;
+  --brand-2: #FF6B35;
+  --brand-ink: #b8301f;
+
+  --lg-fill: rgba(255, 255, 255, 0.52);
+  --lg-fill-thin: rgba(255, 255, 255, 0.34);
+  --lg-fill-thick: rgba(255, 255, 255, 0.72);
+  --lg-rim: rgba(255, 255, 255, 0.85);
+  --lg-rim-soft: rgba(255, 255, 255, 0.45);
+  --lg-edge: rgba(120, 60, 40, 0.10);
+  --lg-blur: 22px;
+  --lg-sat: 185%;
+  --lg-shadow: 0 1px 1px rgba(120, 50, 30, 0.04), 0 8px 24px -8px rgba(160, 60, 30, 0.18), 0 24px 48px -24px rgba(160, 60, 30, 0.16);
+  --lg-shadow-lift: 0 2px 4px rgba(120, 50, 30, 0.05), 0 14px 34px -10px rgba(170, 60, 30, 0.26), 0 32px 64px -28px rgba(170, 60, 30, 0.22);
+  --lg-radius: 26px;
+  --lg-radius-sm: 18px;
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --bg-page: #fff6ef;
+}
+.dark {
+  --lg-fill: rgba(44, 38, 35, 0.48);
+  --lg-fill-thin: rgba(44, 38, 35, 0.30);
+  --lg-fill-thick: rgba(36, 31, 29, 0.74);
+  --lg-rim: rgba(255, 255, 255, 0.16);
+  --lg-rim-soft: rgba(255, 255, 255, 0.07);
+  --lg-edge: rgba(0, 0, 0, 0.35);
+  --lg-shadow: 0 1px 1px rgba(0, 0, 0, 0.25), 0 10px 30px -10px rgba(0, 0, 0, 0.55);
+  --lg-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 40px -12px rgba(0, 0, 0, 0.65);
+  --bg-page: #0e0b0a;
+}
+
+/* 1 ─ Wallpaper the glass refracts. The body must stay transparent or its
+   background would paint over the negative-z backdrop. */
+html, .dark { background: var(--bg-page); }
+body, .dark body { background: transparent !important; }
+.lg-backdrop {
+  position: fixed; inset: -10vmax; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(38vmax 34vmax at 12% 8%, rgba(255, 120, 80, 0.42), transparent 62%),
+    radial-gradient(34vmax 30vmax at 92% 18%, rgba(255, 186, 120, 0.40), transparent 60%),
+    radial-gradient(40vmax 36vmax at 78% 92%, rgba(226, 61, 40, 0.22), transparent 64%),
+    radial-gradient(36vmax 30vmax at 6% 86%, rgba(255, 214, 170, 0.45), transparent 60%),
+    var(--bg-page);
+  animation: lg-drift 38s ease-in-out infinite alternate;
+}
+.dark .lg-backdrop {
+  background:
+    radial-gradient(38vmax 34vmax at 12% 8%, rgba(226, 61, 40, 0.30), transparent 62%),
+    radial-gradient(34vmax 30vmax at 92% 18%, rgba(255, 107, 53, 0.16), transparent 60%),
+    radial-gradient(40vmax 36vmax at 78% 92%, rgba(140, 40, 30, 0.30), transparent 64%),
+    radial-gradient(36vmax 30vmax at 6% 86%, rgba(90, 50, 30, 0.35), transparent 60%),
+    var(--bg-page);
+}
+.lg-backdrop[data-variant="admin"] { filter: saturate(0.55); }
+@keyframes lg-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(-2vmax, 1.5vmax, 0) scale(1.05); }
+}
+
+/* 2 ─ Surfaces */
+.lg, .glass, .card-premium, .lg-thin, .lg-thick, .lg-surface {
+  position: relative;
+  background: var(--lg-fill);
+  -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+  backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat));
+  box-shadow: inset 0 1px 0 var(--lg-rim), inset 0 0 0 1px var(--lg-rim-soft), var(--lg-shadow);
+  border-color: transparent;
+}
+.lg-thin { background: var(--lg-fill-thin); --lg-blur: 16px; }
+.lg-thick, .glass { background: var(--lg-fill-thick); --lg-blur: 28px; }
+.lg-surface { background: var(--lg-fill-thin); box-shadow: inset 0 1px 0 var(--lg-rim-soft), inset 0 0 0 1px var(--lg-rim-soft); }
+.card-premium, .lg-card {
+  border-radius: var(--lg-radius);
+  transition: transform 0.35s var(--ease-spring), box-shadow 0.35s var(--ease-spring), background-color 0.3s ease;
+}
+.lg-card { position: relative; background: var(--lg-fill); -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)); backdrop-filter: blur(var(--lg-blur)) saturate(var(--lg-sat)); box-shadow: inset 0 1px 0 var(--lg-rim), inset 0 0 0 1px var(--lg-rim-soft), var(--lg-shadow); }
+@media (hover: hover) {
+  .card-premium:hover, .lg-card.lg-hover:hover { transform: translateY(-2px); box-shadow: inset 0 1px 0 var(--lg-rim), inset 0 0 0 1px var(--lg-rim-soft), var(--lg-shadow-lift); }
+}
+/* Specular sheen: a soft light sweep across the top third of every card */
+.card-premium::before, .lg-card::before, .lg-sheen::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.0) 38%);
+  mix-blend-mode: soft-light; opacity: 0.9;
+}
+.dark .card-premium::before, .dark .lg-card::before, .dark .lg-sheen::before { opacity: 0.35; }
+
+/* Brand-tinted glass (primary CTAs, cart capsule, selected states) */
+.lg-tinted {
+  position: relative; color: #fff;
+  background: linear-gradient(135deg, rgba(232, 72, 46, 0.86), rgba(255, 112, 60, 0.80));
+  -webkit-backdrop-filter: blur(18px) saturate(190%);
+  backdrop-filter: blur(18px) saturate(190%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(120, 20, 0, 0.18), 0 10px 28px -10px rgba(226, 61, 40, 0.65), 0 2px 6px rgba(226, 61, 40, 0.25);
+}
+.lg-tinted[data-dept="lunch"] { background: linear-gradient(135deg, rgba(255, 112, 60, 0.88), rgba(255, 150, 70, 0.82)); }
+.lg-tinted::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(120% 70% at 30% 0%, rgba(255, 255, 255, 0.38), transparent 55%);
+}
+/* Dark (smoked) glass for admin chrome, POS and receiver */
+.lg-smoke {
+  position: relative; color: #fff;
+  background: rgba(24, 20, 19, 0.62);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 32px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* Navigation bar: clear at rest, frosts once content scrolls under it */
+.lg-nav {
+  position: sticky; top: 0; z-index: 30;
+  padding-top: max(env(safe-area-inset-top), 0px);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease, -webkit-backdrop-filter 0.3s ease, backdrop-filter 0.3s ease;
+  background: transparent;
+}
+.lg-nav[data-scrolled="true"], .lg-nav[data-solid="true"] {
+  background: var(--lg-fill-thick);
+  -webkit-backdrop-filter: blur(26px) saturate(190%);
+  backdrop-filter: blur(26px) saturate(190%);
+  box-shadow: inset 0 -0.5px 0 var(--lg-edge);
+}
+.lg-nav.lg-smoke { background: rgba(24, 20, 19, 0.62); }
+
+/* 3 ─ Controls */
+.lg-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+  min-height: 44px; padding: 0 1.15rem; border-radius: 999px; font-weight: 600;
+  transition: transform 0.25s var(--ease-spring), box-shadow 0.25s ease, filter 0.2s ease, opacity 0.2s ease;
+  -webkit-user-select: none; user-select: none;
+}
+.lg-btn:active:not(:disabled) { transform: scale(0.95); filter: brightness(1.06); }
+.lg-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.lg-btn-lg { min-height: 54px; padding: 0 1.5rem; font-size: 1.0625rem; }
+.lg-btn-sm { min-height: 34px; padding: 0 0.85rem; font-size: 0.8125rem; }
+.lg-btn-icon { width: 40px; min-height: 40px; padding: 0; }
+
+.lg-pill { border-radius: 999px; }
+.lg-chip {
+  display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.5rem 0.95rem; border-radius: 999px;
+  font-size: 0.875rem; font-weight: 600; white-space: nowrap; color: var(--text-secondary);
+  background: var(--lg-fill-thin);
+  -webkit-backdrop-filter: blur(14px) saturate(180%); backdrop-filter: blur(14px) saturate(180%);
+  box-shadow: inset 0 1px 0 var(--lg-rim-soft), inset 0 0 0 1px var(--lg-rim-soft);
+  transition: all 0.3s var(--ease-spring);
+}
+.lg-chip[aria-pressed="true"], .lg-chip[data-active="true"] {
+  color: #fff; background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 6px 18px -6px rgba(226, 61, 40, 0.6);
+}
+
+/* Segmented control with a sliding glass thumb (thumb positioned via CSS vars) */
+.lg-seg {
+  position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  padding: 3px; border-radius: 999px; background: rgba(120, 90, 80, 0.10);
+  box-shadow: inset 0 0 0 1px var(--lg-rim-soft);
+}
+.dark .lg-seg { background: rgba(255, 255, 255, 0.06); }
+.lg-seg > button {
+  position: relative; z-index: 1; min-height: 34px; padding: 0 0.75rem; border-radius: 999px;
+  font-size: 0.8125rem; font-weight: 600; color: var(--text-secondary); transition: color 0.25s ease;
+}
+.lg-seg > button[aria-pressed="true"] { color: var(--text-primary); }
+.lg-seg > .lg-seg-thumb {
+  position: absolute; z-index: 0; top: 3px; bottom: 3px; left: 3px;
+  width: calc((100% - 6px) / var(--seg-count, 2));
+  transform: translateX(calc(100% * var(--seg-index, 0)));
+  border-radius: 999px; background: var(--lg-fill-thick);
+  box-shadow: inset 0 1px 0 var(--lg-rim), 0 3px 10px -3px rgba(120, 50, 30, 0.25);
+  transition: transform 0.45s var(--ease-spring);
+}
+
+.lg-field {
+  width: 100%; min-height: 46px; padding: 0.7rem 1rem; border-radius: 16px; font-size: 1rem;
+  color: var(--text-primary); background: var(--lg-fill-thin);
+  -webkit-backdrop-filter: blur(14px) saturate(170%); backdrop-filter: blur(14px) saturate(170%);
+  box-shadow: inset 0 1px 0 var(--lg-rim-soft), inset 0 0 0 1px var(--lg-rim-soft);
+  transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.lg-field::placeholder { color: var(--text-tertiary); }
+.lg-field:focus { outline: none; background: var(--lg-fill); box-shadow: inset 0 1px 0 var(--lg-rim), 0 0 0 3px rgba(226, 61, 40, 0.22); }
+
+/* Grouped list (iOS inset grouped) */
+.lg-list { border-radius: var(--lg-radius-sm); overflow: hidden; }
+.lg-list > * + * { box-shadow: inset 0 0.5px 0 var(--lg-edge); }
+.lg-row { display: flex; align-items: center; gap: 0.75rem; min-height: 52px; padding: 0.75rem 1rem; }
+
+/* Bottom sheet */
+.lg-sheet {
+  border-radius: 34px 34px 0 0;
+  background: rgba(255, 248, 242, 0.88);
+  -webkit-backdrop-filter: blur(34px) saturate(200%); backdrop-filter: blur(34px) saturate(200%);
+  box-shadow: inset 0 1px 0 var(--lg-rim), 0 -20px 60px -20px rgba(120, 40, 20, 0.35);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.dark .lg-sheet { background: rgba(30, 26, 24, 0.9); }
+.lg-grabber { width: 38px; height: 5px; border-radius: 99px; background: rgba(120, 100, 90, 0.35); margin: 8px auto 4px; }
+
+/* Floating capsule (cart bar / tab bar) */
+.lg-float {
+  position: fixed; left: 0; right: 0; margin-inline: auto;
+  bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 40;
+  width: min(560px, calc(100% - 24px));
+}
+
+/* Large title (iOS) */
+.lg-large-title { font-size: 2.125rem; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+
+/* Text tokens on glass */
+.lg-ink { color: var(--text-primary); }
+.lg-ink-2 { color: var(--text-secondary); }
+.lg-ink-3 { color: var(--text-tertiary); }
+.lg-brand { color: var(--brand); }
+
+/* Status pills */
+.lg-status { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+.lg-status::before { content: ""; width: 6px; height: 6px; border-radius: 99px; background: currentColor; }
+.lg-status[data-s="awaiting_payment"] { color: #a16207; background: rgba(234, 179, 8, 0.16); }
+.lg-status[data-s="pending"] { color: #b45309; background: rgba(245, 158, 11, 0.16); }
+.lg-status[data-s="confirmed"] { color: #1d4ed8; background: rgba(59, 130, 246, 0.15); }
+.lg-status[data-s="ready"] { color: #047857; background: rgba(16, 185, 129, 0.16); }
+.lg-status[data-s="picked_up"] { color: #57534e; background: rgba(120, 113, 108, 0.14); }
+.lg-status[data-s="cancelled"], .lg-status[data-s="payment_failed"] { color: #b91c1c; background: rgba(239, 68, 68, 0.14); }
+.dark .lg-status { filter: brightness(1.5) saturate(0.9); }
+
+/* Entrance motion */
+@keyframes lg-rise { from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.98); } to { opacity: 1; transform: none; } }
+.lg-rise { animation: lg-rise 0.55s var(--ease-spring) both; }
+@keyframes lg-pop { 0% { transform: scale(0.92); opacity: 0; } 60% { transform: scale(1.02); opacity: 1; } 100% { transform: scale(1); } }
+.lg-pop { animation: lg-pop 0.5s var(--ease-spring) both; }
+
+/* Hide scrollbars on chip rows */
+.scrollbar-none { scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar { display: none; }
+
+/* Accessibility: users who reduce transparency get solid surfaces */
+@media (prefers-reduced-transparency: reduce) {
+  .lg, .glass, .card-premium, .lg-thin, .lg-thick, .lg-surface, .lg-card, .lg-sheet, .lg-field, .lg-chip, .lg-nav[data-scrolled="true"] {
+    -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--bg-card);
+  }
+  .lg-backdrop { animation: none; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .lg, .glass, .card-premium, .lg-thin, .lg-thick, .lg-card, .lg-sheet { background: var(--bg-card); }
+}
+
+/* Legacy compatibility: older pages used solid white/stone surfaces with
+   explicit borders. Inside glass cards those read as heavy slabs, so soften
+   them into thin glass without touching each page's markup. */
+.card-premium .bg-white, .lg-card .bg-white { background-color: rgba(255, 255, 255, 0.45); }
+.dark .card-premium .dark\:bg-stone-800, .dark .lg-card .dark\:bg-stone-800,
+.dark .card-premium .dark\:bg-stone-900, .dark .lg-card .dark\:bg-stone-900 { background-color: rgba(255, 255, 255, 0.05); }
+
+/* Dark "stage" for kitchen-facing screens (POS, receiver, wallet desk):
+   a deep warm wallpaper so the smoked-glass panels have colour to refract. */
+.lg-dark-stage {
+  background:
+    radial-gradient(60vmax 50vmax at 0% 0%, rgba(226, 61, 40, 0.28), transparent 60%),
+    radial-gradient(50vmax 40vmax at 100% 100%, rgba(255, 107, 53, 0.16), transparent 60%),
+    radial-gradient(40vmax 40vmax at 100% 0%, rgba(90, 60, 200, 0.10), transparent 60%),
+    #0d0a09;
+}
+.lg-dark-stage .lg-smoke { background: rgba(255, 255, 255, 0.06); }
+.lg-dark-stage header.lg-smoke { background: rgba(20, 16, 15, 0.55); }

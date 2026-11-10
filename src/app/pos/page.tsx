@@ -3,6 +3,19 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useMenuItems, useOrders, createOrderSecure, updateOrderStatusSecure } from "@/lib/hooks";
+
+async function confirmCancel(order: { id: string; orderNumber: string; totalPrice: number; paymentMethod?: string }) {
+  const paid = order.paymentMethod === "wallet" || order.paymentMethod === "ecpay";
+  const msg = paid
+    ? `確定取消訂單 #${String(order.orderNumber).slice(-4)}？\n$${order.totalPrice} 將自動退回學生的校園錢包。`
+    : `確定取消訂單 #${String(order.orderNumber).slice(-4)}？`;
+  if (!window.confirm(msg)) return;
+  try {
+    await updateOrderStatusSecure(order.id, "cancelled");
+  } catch (e) {
+    window.alert(e instanceof Error ? e.message : "取消失敗");
+  }
+}
 import type { MenuItem } from "@/types";
 
 const statusLabels: Record<string, string> = {
@@ -117,7 +130,7 @@ export default function POSPage() {
   const pendingCount = orders.filter((o) => o.status === "pending").length;
 
   return (
-    <div className="h-screen flex flex-col bg-stone-950 text-white overflow-hidden">
+    <div className="h-screen flex flex-col lg-dark-stage text-white overflow-hidden">
       {/* Notification popups */}
       <div className="fixed top-4 right-4 z-50 space-y-2" style={{ maxWidth: 360 }}>
         {notifications.map((n) => (
@@ -143,18 +156,18 @@ export default function POSPage() {
         }
       `}</style>
 
-      <header className="flex items-center justify-between px-5 py-3 bg-stone-900 border-b border-stone-800 shrink-0">
+      <header className="flex items-center justify-between px-5 py-3 lg-smoke shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/admin" className="text-stone-400 hover:text-white transition-colors p-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </Link>
-          <h1 className="text-lg font-bold tracking-tight">POS 點餐機</h1>
+          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap">POS 點餐機</h1>
           {pendingCount > 0 && (
             <span className="bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
               {pendingCount} 筆待處理
             </span>
           )}
-          <div className="flex bg-stone-800 rounded-xl p-0.5">
+          <div className="flex bg-white/8 rounded-xl p-0.5">
             {(["breakfast", "lunch"] as const).map((d) => (
               <button key={d} onClick={() => setDept(d)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${dept === d ? "bg-white text-stone-900" : "text-stone-400 hover:text-white"}`}>
@@ -164,7 +177,7 @@ export default function POSPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/receiver" className="text-sm text-stone-400 hover:text-white transition-colors px-3 py-1.5 bg-stone-800 rounded-lg">
+          <Link href="/receiver" className="text-sm text-stone-400 hover:text-white transition-colors px-3 py-1.5 bg-white/8 rounded-lg">
             接單螢幕
           </Link>
           <button onClick={() => setSoundOn(!soundOn)} className="text-stone-400 hover:text-white transition-colors p-1.5">
@@ -174,7 +187,7 @@ export default function POSPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
             )}
           </button>
-          <div className="flex bg-stone-800 rounded-xl p-0.5">
+          <div className="flex bg-white/8 rounded-xl p-0.5">
             <button onClick={() => setView("order")}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${view === "order" ? "bg-white text-stone-900" : "text-stone-400 hover:text-white"}`}>
               點餐
@@ -199,7 +212,7 @@ export default function POSPage() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2">
                   {menuItems.filter((i) => i.category === cat).map((item) => (
                     <button key={item.id} onClick={() => addToCart(item)}
-                      className="bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-xl p-3 text-left transition-all active:scale-95">
+                      className="bg-white/8 hover:bg-white/15 border border-white/10 rounded-xl p-3 text-left transition-all active:scale-95">
                       <p className="font-semibold text-sm truncate">{item.name}</p>
                       <p className="text-amber-400 font-bold mt-1">${item.price}</p>
                     </button>
@@ -208,35 +221,35 @@ export default function POSPage() {
               </div>
             ))}
           </div>
-          <div className="w-80 bg-stone-900 border-l border-stone-800 flex flex-col shrink-0">
-            <div className="p-4 border-b border-stone-800">
+          <div className="w-80 lg-smoke border-l border-white/10 flex flex-col shrink-0">
+            <div className="p-4 border-b border-white/10">
               <h2 className="font-bold text-lg">目前訂單</h2>
               <p className="text-sm text-stone-500">{cart.length} 項品項</p>
             </div>
             <div className="flex-1 overflow-y-auto p-4 space-y-2">
               {cart.length === 0 && <p className="text-stone-600 text-center mt-10 text-sm">點擊菜單加入品項</p>}
               {cart.map((c) => (
-                <div key={c.item.id} className="bg-stone-800 rounded-xl p-3 flex items-center gap-3">
+                <div key={c.item.id} className="bg-white/8 rounded-xl p-3 flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{c.item.name}</p>
                     <p className="text-xs text-stone-500">${c.item.price}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => updateCartQty(c.item.id, c.qty - 1)}
-                      className="w-7 h-7 rounded-lg bg-stone-700 flex items-center justify-center text-sm hover:bg-stone-600">−</button>
+                      className="w-7 h-7 rounded-lg bg-white/12 flex items-center justify-center text-sm hover:bg-stone-600">−</button>
                     <span className="w-5 text-center text-sm font-bold">{c.qty}</span>
                     <button onClick={() => updateCartQty(c.item.id, c.qty + 1)}
-                      className="w-7 h-7 rounded-lg bg-stone-700 flex items-center justify-center text-sm hover:bg-stone-600">+</button>
+                      className="w-7 h-7 rounded-lg bg-white/12 flex items-center justify-center text-sm hover:bg-stone-600">+</button>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="p-4 border-t border-stone-800 space-y-3">
+            <div className="p-4 border-t border-white/10 space-y-3">
               <div className="flex justify-between text-lg font-bold">
                 <span>合計</span><span className="text-amber-400">${cartTotal}</span>
               </div>
               <button onClick={submitOrder} disabled={cart.length === 0}
-                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-stone-700 disabled:text-stone-500 text-white rounded-xl py-3 font-bold text-lg transition-all active:scale-98">
+                className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-white/12 disabled:text-stone-500 text-white rounded-xl py-3 font-bold text-lg transition-all active:scale-98">
                 送出訂單
               </button>
               {cart.length > 0 && (
@@ -254,10 +267,10 @@ export default function POSPage() {
               const next = nextMap[order.status];
               return (
                 <div key={order.id}
-                  className={`bg-stone-900 border rounded-xl p-4 ${
+                  className={`lg-smoke border rounded-xl p-4 ${
                     order.status === "pending" ? "border-amber-500/50 shadow-lg shadow-amber-500/10"
                     : order.status === "ready" ? "border-emerald-500/50 shadow-lg shadow-emerald-500/10"
-                    : "border-stone-800"
+                    : "border-white/10"
                   }`}>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-2xl font-black">#{order.orderNumber}</span>
@@ -284,7 +297,7 @@ export default function POSPage() {
                       </button>
                     )}
                     {order.status !== "cancelled" && (
-                      <button onClick={() => updateOrderStatusSecure(order.id, "cancelled")}
+                      <button onClick={() => confirmCancel(order as Parameters<typeof confirmCancel>[0])}
                         className="px-4 py-2 rounded-xl text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all">取消</button>
                     )}
                   </div>

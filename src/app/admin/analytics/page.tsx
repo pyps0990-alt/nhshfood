@@ -131,16 +131,16 @@ export default function AnalyticsPage() {
 
   return (
     <div className="flex-1 flex flex-col bg-stone-50 dark:bg-stone-950">
-      <header className="bg-stone-900 text-white px-5 py-4 flex items-center gap-4">
+      <header data-solid="true" className="lg-nav lg-smoke text-white px-5 py-4 flex items-center gap-4">
         <BackButton href="/admin/hub" variant="light" />
-        <h1 className="text-lg font-bold tracking-tight">數據分析</h1>
-        <Link href="/admin" className="ml-auto text-sm bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl transition-colors">
+        <h1 className="text-lg font-bold tracking-tight whitespace-nowrap">數據分析</h1>
+        <Link href="/admin" className="ml-auto text-sm lg-btn lg-btn-sm bg-white/12 hover:bg-white/20 text-white">
           訂單管理
         </Link>
       </header>
 
       {/* Daily reconciliation panel */}
-      <section className="px-5 py-4 border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 space-y-3">
+      <section className="px-5 py-4 border-b border-stone-200 dark:border-stone-800 lg-surface space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h2 className="text-base font-bold text-stone-800 dark:text-stone-100 flex items-center gap-2">
@@ -149,7 +149,7 @@ export default function AnalyticsPage() {
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300">異常</span>
               )}
             </h2>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">錢包扣款訂單額 vs 錢包實際扣款額 三方勾稽</p>
+            <p className="text-xs lg-ink-2 mt-0.5">錢包扣款訂單額 vs 錢包實際扣款額 三方勾稽</p>
           </div>
           <div className="flex gap-2 items-center">
             <input
@@ -157,11 +157,11 @@ export default function AnalyticsPage() {
               value={recDate}
               max={todayStr()}
               onChange={(e) => setRecDate(e.target.value)}
-              className="px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30"
+              className="lg-field text-sm"
             />
             <button
               onClick={downloadReconcileCsv}
-              className="px-4 py-2 rounded-xl bg-[#E23D28] hover:bg-[#c9321f] text-white text-sm font-semibold transition-colors flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl lg-tinted text-sm font-semibold transition-colors flex items-center gap-1.5"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
               下載 CSV
@@ -194,14 +194,14 @@ export default function AnalyticsPage() {
       </section>
 
       {/* Filters */}
-      <div className="px-5 py-4 border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 space-y-3">
+      <div className="px-5 py-4 border-b border-stone-200 dark:border-stone-800 lg-surface space-y-3">
         <div className="flex gap-2">
           {rangeOptions.map((r) => (
             <button key={r.key} onClick={() => setRange(r.key)}
               className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
                 range === r.key
-                  ? "bg-[#E23D28] text-white border-[#E23D28] shadow-sm"
-                  : "border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 bg-white dark:bg-stone-900"
+                  ? "lg-tinted border-[#E23D28] shadow-sm"
+                  : "border-stone-200 dark:border-stone-700 lg-ink-2 hover:bg-black/5 dark:hover:bg-white/5 lg-surface"
               }`}
             >{r.label}</button>
           ))}
@@ -212,7 +212,7 @@ export default function AnalyticsPage() {
               className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
                 dept === d.key
                   ? "bg-stone-800 dark:bg-stone-200 text-white dark:text-stone-900 border-stone-800 dark:border-stone-200"
-                  : "border-stone-200 dark:border-stone-700 text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800 bg-white dark:bg-stone-900"
+                  : "border-stone-200 dark:border-stone-700 lg-ink-2 hover:bg-black/5 dark:hover:bg-white/5 lg-surface"
               }`}
             >{d.label}</button>
           ))}
@@ -245,23 +245,23 @@ export default function AnalyticsPage() {
 
           {/* Completion / Cancel rate */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4">
-              <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">完成率</p>
+            <div className="lg-surface border border-white/60 dark:border-white/10 rounded-[22px] p-4">
+              <p className="text-xs lg-ink-2 mb-1">完成率</p>
               <div className="flex items-end gap-2">
                 <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{data.overview.completionRate}%</span>
                 <span className="text-xs text-stone-400 mb-1">{data.overview.completedOrders} 筆</span>
               </div>
-              <div className="mt-2 h-2 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+              <div className="mt-2 h-2 lg-thin rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${data.overview.completionRate}%` }} />
               </div>
             </div>
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4">
-              <p className="text-xs text-stone-500 dark:text-stone-400 mb-1">取消率</p>
+            <div className="lg-surface border border-white/60 dark:border-white/10 rounded-[22px] p-4">
+              <p className="text-xs lg-ink-2 mb-1">取消率</p>
               <div className="flex items-end gap-2">
                 <span className="text-2xl font-black text-red-500">{data.overview.cancelRate}%</span>
                 <span className="text-xs text-stone-400 mb-1">{data.overview.cancelledOrders} 筆</span>
               </div>
-              <div className="mt-2 h-2 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+              <div className="mt-2 h-2 lg-thin rounded-full overflow-hidden">
                 <div className="h-full bg-red-500 rounded-full transition-all" style={{ width: `${data.overview.cancelRate}%` }} />
               </div>
             </div>
@@ -272,12 +272,12 @@ export default function AnalyticsPage() {
             <Section title="部門對比">
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(data.deptSplit).map(([d, v]) => (
-                  <div key={d} className={`rounded-2xl p-4 border ${d === "breakfast" ? "bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900" : "bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900"}`}>
+                  <div key={d} className={`rounded-[22px] p-4 border ${d === "breakfast" ? "bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900" : "bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900"}`}>
                     <p className={`text-sm font-bold ${d === "breakfast" ? "text-[#E23D28]" : "text-[#FF6B35]"}`}>
                       {d === "breakfast" ? "早餐部" : "午餐部"}
                     </p>
-                    <p className="text-xl font-black text-stone-800 dark:text-stone-200 mt-1">${v.revenue.toLocaleString()}</p>
-                    <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">{v.orders} 筆訂單</p>
+                    <p className="text-xl font-black lg-ink mt-1">${v.revenue.toLocaleString()}</p>
+                    <p className="text-xs lg-ink-2 mt-0.5">{v.orders} 筆訂單</p>
                   </div>
                 ))}
               </div>
@@ -320,14 +320,14 @@ export default function AnalyticsPage() {
                   return (
                     <div key={i} className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        i < 3 ? "bg-[#E23D28] text-white" : "bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400"
+                        i < 3 ? "lg-tinted" : "bg-stone-200 dark:bg-stone-700 lg-ink-2"
                       }`}>{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between mb-1">
-                          <span className="text-sm font-semibold text-stone-800 dark:text-stone-200 truncate">{item.name}</span>
-                          <span className="text-xs text-stone-500 dark:text-stone-400 shrink-0 ml-2">{item.qty} 份 / ${item.revenue}</span>
+                          <span className="text-sm font-semibold lg-ink truncate">{item.name}</span>
+                          <span className="text-xs lg-ink-2 shrink-0 ml-2">{item.qty} 份 / ${item.revenue}</span>
                         </div>
-                        <div className="h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                        <div className="h-1.5 lg-thin rounded-full overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
@@ -353,14 +353,14 @@ export default function AnalyticsPage() {
                   return (
                     <div key={i} className="flex items-center gap-3">
                       <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                        i < 3 ? "bg-blue-500 text-white" : "bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-400"
+                        i < 3 ? "bg-blue-500 text-white" : "bg-stone-200 dark:bg-stone-700 lg-ink-2"
                       }`}>{i + 1}</span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-baseline justify-between mb-1">
-                          <span className="text-sm font-semibold text-stone-800 dark:text-stone-200">{cls.className}</span>
-                          <span className="text-xs text-stone-500 dark:text-stone-400 shrink-0 ml-2">{cls.orders} 筆 / ${cls.revenue}</span>
+                          <span className="text-sm font-semibold lg-ink">{cls.className}</span>
+                          <span className="text-xs lg-ink-2 shrink-0 ml-2">{cls.orders} 筆 / ${cls.revenue}</span>
                         </div>
-                        <div className="h-1.5 bg-stone-100 dark:bg-stone-800 rounded-full overflow-hidden">
+                        <div className="h-1.5 lg-thin rounded-full overflow-hidden">
                           <div
                             className="h-full bg-blue-500 rounded-full transition-all"
                             style={{ width: `${(cls.orders / maxOrders) * 100}%` }}
@@ -379,10 +379,10 @@ export default function AnalyticsPage() {
             <Section title="訂單狀態分布">
               <div className="flex gap-2 flex-wrap">
                 {Object.entries(data.statusBreakdown).map(([status, count]) => (
-                  <div key={status} className="flex items-center gap-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl px-3 py-2">
+                  <div key={status} className="flex items-center gap-2 lg-surface border border-white/60 dark:border-white/10 rounded-xl px-3 py-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: statusColors[status] || "#6b7280" }} />
-                    <span className="text-sm font-medium text-stone-700 dark:text-stone-300">{statusLabels[status] || status}</span>
-                    <span className="text-sm font-bold text-stone-900 dark:text-stone-100">{count}</span>
+                    <span className="text-sm font-medium lg-ink">{statusLabels[status] || status}</span>
+                    <span className="text-sm font-bold lg-ink">{count}</span>
                   </div>
                 ))}
               </div>
@@ -396,8 +396,8 @@ export default function AnalyticsPage() {
 
 function StatCard({ label, value, color, bg }: { label: string; value: string; color: string; bg: string }) {
   return (
-    <div className={`border rounded-2xl px-4 py-3 ${bg}`}>
-      <p className="text-xs text-stone-500 dark:text-stone-400">{label}</p>
+    <div className={`border rounded-[22px] px-4 py-3 ${bg}`}>
+      <p className="text-xs lg-ink-2">{label}</p>
       <p className={`text-2xl font-black mt-0.5 ${color}`}>{value}</p>
     </div>
   );
@@ -411,7 +411,7 @@ function ReconcileTile({ label, value, tone }: { label: string; value: string; t
       ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200"
       : tone === "ok"
       ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
-      : "bg-stone-50 dark:bg-stone-800 border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200";
+      : "lg-surface border-stone-200 dark:border-stone-700 lg-ink";
   return (
     <div className={`border rounded-xl px-3 py-2 ${cls}`}>
       <p className="text-[10px] font-medium opacity-70">{label}</p>
@@ -422,8 +422,8 @@ function ReconcileTile({ label, value, tone }: { label: string; value: string; t
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-5">
-      <h3 className="text-sm font-bold text-stone-700 dark:text-stone-300 mb-4 flex items-center gap-2">
+    <div className="lg-surface border border-white/60 dark:border-white/10 rounded-[22px] p-5">
+      <h3 className="text-sm font-bold lg-ink mb-4 flex items-center gap-2">
         <div className="w-1 h-4 bg-[#E23D28] rounded-full" />
         {title}
       </h3>
@@ -438,9 +438,9 @@ function BarChart({ data, color, prefix = "" }: { data: { label: string; value: 
     <div className="space-y-2">
       {data.map((d, i) => (
         <div key={i} className="flex items-center gap-3">
-          <span className="text-xs text-stone-500 dark:text-stone-400 w-12 text-right shrink-0 font-mono">{d.label}</span>
+          <span className="text-xs lg-ink-2 w-12 text-right shrink-0 font-mono">{d.label}</span>
           <div className="flex-1 flex items-center gap-2">
-            <div className="flex-1 h-6 bg-stone-100 dark:bg-stone-800 rounded-lg overflow-hidden">
+            <div className="flex-1 h-6 lg-thin rounded-lg overflow-hidden">
               <div
                 className="h-full rounded-lg transition-all flex items-center justify-end pr-2"
                 style={{ width: `${Math.max((d.value / max) * 100, 2)}%`, backgroundColor: color }}
@@ -451,7 +451,7 @@ function BarChart({ data, color, prefix = "" }: { data: { label: string; value: 
               </div>
             </div>
             {(d.value / max) <= 0.2 && (
-              <span className="text-xs text-stone-500 dark:text-stone-400 shrink-0">{prefix}{d.value.toLocaleString()}</span>
+              <span className="text-xs lg-ink-2 shrink-0">{prefix}{d.value.toLocaleString()}</span>
             )}
           </div>
           {d.sub && <span className="text-[10px] text-stone-400 shrink-0 w-8">{d.sub}</span>}
@@ -469,7 +469,7 @@ function HourlyChart({ data }: { data: number[] }) {
   return (
     <div>
       {peakHour.count > 0 && (
-        <p className="text-xs text-stone-500 dark:text-stone-400 mb-3">
+        <p className="text-xs lg-ink-2 mb-3">
           尖峰時段：<span className="font-bold text-[#E23D28]">{peakHour.hour}:00</span>（{peakHour.count} 筆）
         </p>
       )}
@@ -478,7 +478,7 @@ function HourlyChart({ data }: { data: number[] }) {
           <div key={h.hour} className="flex-1 flex flex-col items-center gap-1">
             <div className="w-full flex flex-col items-center justify-end" style={{ height: "80px" }}>
               {h.count > 0 && (
-                <span className="text-[9px] font-bold text-stone-500 dark:text-stone-400 mb-0.5">{h.count}</span>
+                <span className="text-[9px] font-bold lg-ink-2 mb-0.5">{h.count}</span>
               )}
               <div
                 className="w-full rounded-t-sm transition-all"
@@ -489,7 +489,7 @@ function HourlyChart({ data }: { data: number[] }) {
                 }}
               />
             </div>
-            <span className="text-[9px] text-stone-400 dark:text-stone-500 font-mono">{h.hour}</span>
+            <span className="text-[9px] lg-ink-3 font-mono">{h.hour}</span>
           </div>
         ))}
       </div>
@@ -510,7 +510,7 @@ function PrepTimeSection({ stats }: { stats: AnalyticsData["prepTimeStats"] }) {
 
   return (
     <div className="space-y-5">
-      <p className="text-xs text-stone-400 dark:text-stone-500">
+      <p className="text-xs lg-ink-3">
         基於 {stats.sampleSize} 筆有完整時間戳的訂單
       </p>
 
@@ -534,30 +534,30 @@ function PrepTimeSection({ stats }: { stats: AnalyticsData["prepTimeStats"] }) {
       </div>
 
       {/* Detail stats table */}
-      <div className="border border-stone-200 dark:border-stone-700 rounded-xl overflow-hidden text-sm">
+      <div className="border border-white/60 dark:border-white/10 rounded-xl overflow-hidden text-sm">
         <table className="w-full">
           <thead>
-            <tr className="bg-stone-50 dark:bg-stone-800 text-stone-500 dark:text-stone-400 text-xs">
+            <tr className="lg-surface lg-ink-2 text-xs">
               <th className="text-left px-3 py-2 font-medium">階段</th>
               <th className="text-right px-3 py-2 font-medium">平均</th>
               <th className="text-right px-3 py-2 font-medium">中位數</th>
               <th className="text-right px-3 py-2 font-medium">P90</th>
             </tr>
           </thead>
-          <tbody className="text-stone-800 dark:text-stone-200">
-            <tr className="border-t border-stone-100 dark:border-stone-800">
+          <tbody className="lg-ink">
+            <tr className="border-t border-black/5 dark:border-white/10">
               <td className="px-3 py-2 font-medium">下單 → 確認</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.confirmTime.avg)}</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.confirmTime.median)}</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.confirmTime.p90)}</td>
             </tr>
-            <tr className="border-t border-stone-100 dark:border-stone-800">
+            <tr className="border-t border-black/5 dark:border-white/10">
               <td className="px-3 py-2 font-medium">確認 → 備好</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.cookTime.avg)}</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.cookTime.median)}</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.cookTime.p90)}</td>
             </tr>
-            <tr className="border-t border-stone-100 dark:border-stone-800 font-semibold">
+            <tr className="border-t border-black/5 dark:border-white/10 font-semibold">
               <td className="px-3 py-2">下單 → 備好</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.totalPrepTime.avg)}</td>
               <td className="px-3 py-2 text-right font-mono">{fmt(stats.totalPrepTime.median)}</td>
@@ -569,12 +569,12 @@ function PrepTimeSection({ stats }: { stats: AnalyticsData["prepTimeStats"] }) {
 
       {/* Distribution histogram */}
       <div>
-        <p className="text-xs font-semibold text-stone-600 dark:text-stone-400 mb-2">準備時間分布（分鐘）</p>
+        <p className="text-xs font-semibold lg-ink-2 mb-2">準備時間分布（分鐘）</p>
         <div className="flex items-end gap-1 h-20">
           {stats.distribution.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center gap-0.5">
               {d.count > 0 && (
-                <span className="text-[9px] font-bold text-stone-500 dark:text-stone-400">{d.count}</span>
+                <span className="text-[9px] font-bold lg-ink-2">{d.count}</span>
               )}
               <div
                 className="w-full rounded-t transition-all"
@@ -586,7 +586,7 @@ function PrepTimeSection({ stats }: { stats: AnalyticsData["prepTimeStats"] }) {
                   opacity: d.count === 0 ? 0.3 : 1,
                 }}
               />
-              <span className="text-[8px] text-stone-400 dark:text-stone-500 whitespace-nowrap">{d.label}</span>
+              <span className="text-[8px] lg-ink-3 whitespace-nowrap">{d.label}</span>
             </div>
           ))}
         </div>
@@ -598,8 +598,8 @@ function PrepTimeSection({ stats }: { stats: AnalyticsData["prepTimeStats"] }) {
 
       {/* Peak hour insight */}
       {slowestHour && fastestHour && slowestHour.hour !== fastestHour.hour && (
-        <div className="bg-stone-50 dark:bg-stone-800 rounded-xl p-3 space-y-1.5">
-          <p className="text-xs font-semibold text-stone-600 dark:text-stone-400">各時段平均準備時間</p>
+        <div className="lg-surface rounded-xl p-3 space-y-1.5">
+          <p className="text-xs font-semibold lg-ink-2">各時段平均準備時間</p>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-500" />

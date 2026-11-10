@@ -3,9 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   db,
-  collection,
   doc,
-  query,
+
   where,
   onSnapshot,
 } from "./firebase";
@@ -60,6 +59,23 @@ export function useMenuItems(department: string) {
       setLoading(false);
     }, 8000);
 
+    // REST first paint (CDN-cached, fast). The realtime listener below takes
+    // over as the source of truth when it connects.
+    let gotSnapshot = false;
+    let gotRest = false;
+    fetch(`/api/menu?department=${encodeURIComponent(department)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: MenuItem[] | null) => {
+        if (cancelled || gotSnapshot || !Array.isArray(data)) return;
+        gotRest = true;
+        menuCache.set(department, { items: data, fetchTime: Date.now() });
+        setItems(data);
+        setLoading(false);
+        setError(null);
+        clearTimeout(timeout);
+      })
+      .catch(() => {});
+
     const key = `menu-${department}`;
     const unsub = listenerManager.subscribe(
       key,
@@ -67,6 +83,10 @@ export function useMenuItems(department: string) {
       [where("department", "==", department)],
       (snap) => {
         if (cancelled) return;
+        // An empty snapshot served from the local cache just means "not
+        // connected yet" — don't let it wipe a menu we already have.
+        if (snap.metadata.fromCache && snap.empty) return;
+        gotSnapshot = true;
         const data = snap.docs
           .map((d) => ({ id: d.id, ...d.data() } as MenuItem))
           .filter((i) => i.available)
@@ -80,6 +100,8 @@ export function useMenuItems(department: string) {
       (err) => {
         if (cancelled) return;
         console.error("Menu subscription error:", err);
+        // Realtime failed but REST already painted the menu — keep it.
+        if (gotRest) return;
         setError("菜單載入失敗，請稍後重試");
         setLoading(false);
         clearTimeout(timeout);
@@ -205,20 +227,53 @@ export function useOrder(id: string) {
 
   useEffect(() => {
     if (!id) return;
-    const unsub = onSnapshot(doc(db, "orders", id), (snap) => {
-      if (!snap.exists()) {
-        setOrder(null);
-      } else {
+    let cancelled = false;
+    let poll: ReturnType<typeof setInterval> | null = null;
+
+    // Fallback: poll the API (owner/admin get full detail; others a public view).
+    const fetchOnce = async () => {
+      try {
+        const res = await fetch(`/api/orders/${encodeURIComponent(id)}`, { cache: "no-store" });
+        if (cancelled) return;
+        if (res.status === 404) { setOrder(null); setLoading(false); return; }
+        if (res.ok) { setOrder((await res.json()) as Order); setLoading(false); }
+      } catch {}
+    };
+    const startPolling = () => {
+      if (poll) return;
+      fetchOnce();
+      poll = setInterval(() => { if (!document.hidden) fetchOnce(); }, 4000);
+    };
+
+    const unsub = onSnapshot(
+      doc(db, "orders", id),
+      (snap) => {
+        if (cancelled) return;
+        if (!snap.exists()) {
+          // Could be a permissions/race issue — confirm via the API before showing "not found".
+          startPolling();
+          return;
+        }
+        if (poll) { clearInterval(poll); poll = null; }
         const raw = snap.data();
         setOrder({
           id: snap.id,
           ...raw,
           createdAt: raw.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
         } as Order);
-      }
-      setLoading(false);
-    });
-    return unsub;
+        setLoading(false);
+      },
+      () => startPolling()
+    );
+    // If realtime hasn't delivered anything shortly, start the fallback too.
+    const t = setTimeout(() => { if (!cancelled) setLoading((l) => { if (l) startPolling(); return l; }); }, 2500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      if (poll) clearInterval(poll);
+      unsub();
+    };
   }, [id]);
 
   return { order, loading };

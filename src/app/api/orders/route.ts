@@ -29,7 +29,7 @@ const createOrderSchema = z.object({
         menuItemId: z.string().regex(/^[A-Za-z0-9]{1,50}$/),
         // name/price from the client are ignored; server uses the menu.
         name: z.string().max(100).optional(),
-        quantity: z.number().int().min(1).max(20),
+        quantity: z.number().int().min(1).max(20, "單一品項最多 20 份"),
         price: z.number().optional(),
       })
     )

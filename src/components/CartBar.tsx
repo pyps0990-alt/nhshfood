@@ -2,7 +2,6 @@
 
 import { useRef } from "react";
 import { useCart } from "@/lib/cart";
-import { getDeptConfig } from "@/lib/department";
 import { useExitAnimation } from "@/lib/useExitAnimation";
 import { useT } from "@/lib/i18n";
 
@@ -11,7 +10,6 @@ export function CartBar({ department, onOpen }: { department: string; onOpen: ()
   const deptItems = items.filter((i) => i.department === department);
   const count = deptItems.reduce((s, i) => s + i.quantity, 0);
   const total = deptItems.reduce((s, i) => s + i.menuItem.price * i.quantity, 0);
-  const cfg = getDeptConfig(department);
   const t = useT();
 
   const { mounted, closing } = useExitAnimation(count > 0, 200);
@@ -31,18 +29,23 @@ export function CartBar({ department, onOpen }: { department: string; onOpen: ()
   if (!mounted) return null;
 
   return (
-    <div className={`fixed bottom-0 inset-x-0 p-4 glass dark:bg-stone-900/85 border-t border-stone-200/50 dark:border-stone-800 z-20 ${closing ? "animate-slide-down" : enterAnimation}`}>
+    <div className={`lg-float ${closing ? "animate-slide-down" : enterAnimation}`}>
       <button
         onClick={onOpen}
-        className={`w-full flex items-center justify-between ${cfg.headerBg} text-white rounded-2xl px-6 py-4 font-semibold shadow-lg hover:shadow-xl active:scale-[0.98] transition-all duration-150`}
+        data-dept={department}
+        className="lg-tinted w-full flex items-center justify-between rounded-full pl-2.5 pr-6 h-[60px] font-semibold active:scale-[0.98] transition-transform duration-300"
+        aria-label={`${t("cart")}，${display.count} 件，共 $${display.total}`}
       >
-        <span className="flex items-center gap-2">
-          <span className="bg-white/20 rounded-full w-7 h-7 flex items-center justify-center text-sm font-bold animate-cart-pop">
-            {display.count}
+        <span className="flex items-center gap-3">
+          <span className="relative w-11 h-11 rounded-full bg-white/22 grid place-items-center">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" /><path d="M3 6h18M16 10a4 4 0 01-8 0" /></svg>
+            <span key={display.count} className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-white text-[11px] font-bold grid place-items-center animate-cart-pop" style={{ color: "var(--brand)" }}>
+              {display.count}
+            </span>
           </span>
-          {t("cart")}
+          <span className="text-[16px]">{t("cart")}</span>
         </span>
-        <span className="text-lg font-bold">${display.total}</span>
+        <span className="text-[19px] font-bold tabular-nums" style={{ fontFamily: "var(--font-rounded)" }}>${display.total}</span>
       </button>
     </div>
   );

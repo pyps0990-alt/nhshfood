@@ -109,29 +109,30 @@ export default function AdminHubPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-stone-50 dark:bg-stone-950">
-      <header className="bg-stone-900 text-white px-5 py-4 flex items-center gap-3">
+    <div className="flex-1 flex flex-col">
+      <header data-solid="true" className="lg-nav lg-smoke text-white px-5 py-4 flex items-center gap-3">
         <h1 className="text-lg font-bold tracking-tight flex-1">管理總覽</h1>
-        <button onClick={handleLogout} className="text-sm bg-stone-800 hover:bg-stone-700 px-3 py-2 rounded-xl transition-colors">
+        <button onClick={handleLogout} className="lg-btn lg-btn-sm bg-white/12 text-white">
           登出
         </button>
       </header>
 
       <main className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full">
-        <p className="text-sm text-stone-500 dark:text-stone-400 mb-5">選擇要前往的管理功能</p>
+        <h2 className="lg-large-title lg-ink">管理總覽</h2>
+        <p className="text-[15px] lg-ink-2 mt-1 mb-6">選擇要前往的管理功能</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className={`flex flex-col gap-3 p-4 rounded-2xl bg-gradient-to-br ${l.color} shadow-md hover:shadow-lg active:scale-[0.97] transition-all duration-150`}
+              className="lg-card lg-hover flex flex-col gap-3 p-4 active:scale-[0.97]"
             >
-              <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center">
+              <div className={`w-12 h-12 rounded-[16px] grid place-items-center text-white bg-gradient-to-br ${l.color} shadow-[inset_0_1px_0_rgba(255,255,255,0.5),0_8px_18px_-8px_rgba(0,0,0,0.35)]`}>
                 {l.icon}
               </div>
               <div>
-                <p className="text-white font-bold text-sm">{l.label}</p>
-                <p className="text-white/70 text-[11px] mt-0.5 leading-snug">{l.desc}</p>
+                <p className="lg-ink font-semibold text-[15px]">{l.label}</p>
+                <p className="lg-ink-3 text-[12px] mt-0.5 leading-snug">{l.desc}</p>
               </div>
             </Link>
           ))}

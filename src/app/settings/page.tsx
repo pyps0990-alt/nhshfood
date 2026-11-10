@@ -112,9 +112,9 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="glass dark:bg-stone-900/85 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
+      <header data-solid="true" className="lg-nav px-5 py-4 flex items-center gap-3">
         <BackButton href="/" />
-        <h1 className="text-lg font-bold text-stone-900 dark:text-stone-100">{t("settings")}</h1>
+        <h1 className="text-lg font-bold lg-ink">{t("settings")}</h1>
       </header>
 
       <main className="flex-1 px-5 py-6 max-w-lg mx-auto w-full space-y-5 stagger-children">
@@ -149,14 +149,14 @@ export default function SettingsPage() {
               {/* Nickname editing */}
               {showNickInput ? (
                 <div className="p-3 space-y-2.5">
-                  <label className="text-xs font-medium text-stone-500 dark:text-stone-400">暱稱</label>
+                  <label className="text-xs font-medium lg-ink-2">暱稱</label>
                   <input
                     type="text"
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     placeholder="輸入你想顯示的名稱"
                     maxLength={30}
-                    className="w-full px-3 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-sm text-stone-800 dark:text-stone-200 outline-none focus:border-[#E23D28] transition-colors"
+                    className="lg-field w-full text-sm"
                   />
                   {nickError && <p className="text-xs text-red-500">{nickError}</p>}
                   {nickSaved && (
@@ -168,33 +168,33 @@ export default function SettingsPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => { setShowNickInput(false); setNickname(student?.displayName || ""); setNickError(""); }}
-                      className="flex-1 py-2 rounded-xl border border-stone-200 dark:border-stone-700 text-sm text-stone-500 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
+                      className="flex-1 py-2 rounded-xl border border-white/60 dark:border-white/10 text-sm text-stone-500 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                     >取消</button>
                     <button
                       onClick={saveNickname}
                       disabled={nickSaving || !nickname.trim()}
-                      className="flex-1 py-2 rounded-xl bg-gradient-to-r from-[#E23D28] to-[#FF6B35] text-white text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
+                      className="flex-1 py-2 rounded-xl lg-tinted text-sm font-semibold disabled:opacity-50 active:scale-[0.98] transition-all"
                     >{nickSaving ? "儲存中..." : "儲存"}</button>
                   </div>
                 </div>
               ) : (
                 <button
                   onClick={() => setShowNickInput(true)}
-                  className="flex items-center gap-2 p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 dark:active:bg-stone-700 transition-colors w-full text-left"
+                  className="flex items-center gap-2 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:bg-stone-100 dark:active:bg-stone-700 transition-colors w-full text-left"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500 shrink-0">
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
                   <div className="min-w-0 flex-1">
-                    <span className="text-sm font-medium text-stone-700 dark:text-stone-300">暱稱</span>
+                    <span className="text-sm font-medium lg-ink">暱稱</span>
                     <span className="text-xs text-stone-400 ml-2">{student?.displayName || "尚未設定"}</span>
                   </div>
                   <IconChevronRight size={14} className="text-stone-300 shrink-0" />
                 </button>
               )}
-              <Link href="/profile" className="flex items-center gap-2 p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-stone-800 active:bg-stone-100 dark:active:bg-stone-700 transition-colors">
+              <Link href="/profile" className="flex items-center gap-2 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:bg-stone-100 dark:active:bg-stone-700 transition-colors">
                 <IconUser size={16} className="text-stone-500" />
-                <span className="text-sm font-medium text-stone-700 dark:text-stone-300 truncate">{t("profile")}</span>
+                <span className="text-sm font-medium lg-ink truncate">{t("profile")}</span>
                 <IconChevronRight size={14} className="text-stone-300 ml-auto shrink-0" />
               </Link>
             </div>
@@ -205,7 +205,7 @@ export default function SettingsPage() {
         {student && !student.displayName && !showNickInput && (
           <button
             onClick={() => setShowNickInput(true)}
-            className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-2xl animate-fade-in"
+            className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border border-amber-200/60 dark:border-amber-800/40 rounded-[22px] animate-fade-in"
           >
             <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center shrink-0">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -222,7 +222,7 @@ export default function SettingsPage() {
 
         {/* Theme */}
         <div className="card-premium p-5">
-          <h2 className="font-bold text-stone-800 dark:text-stone-200 mb-4 flex items-center gap-2">
+          <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
             <IconSun size={16} className="text-stone-500" />
             {t("dark_mode")}
           </h2>
@@ -239,8 +239,8 @@ export default function SettingsPage() {
                       : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600"
                   }`}
                 >
-                  <Icon size={22} className={theme === opt.value ? "text-[#E23D28]" : "text-stone-500 dark:text-stone-400"} />
-                  <span className={`text-xs font-medium ${theme === opt.value ? "text-[#E23D28]" : "text-stone-600 dark:text-stone-400"}`}>
+                  <Icon size={22} className={theme === opt.value ? "text-[#E23D28]" : "lg-ink-2"} />
+                  <span className={`text-xs font-medium ${theme === opt.value ? "text-[#E23D28]" : "lg-ink-2"}`}>
                     {t(opt.label)}
                   </span>
                 </button>
@@ -251,7 +251,7 @@ export default function SettingsPage() {
 
         {/* Language */}
         <div className="card-premium p-5">
-          <h2 className="font-bold text-stone-800 dark:text-stone-200 mb-4 flex items-center gap-2">
+          <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
             <IconGlobe size={16} className="text-stone-500" />
             {t("language")}
           </h2>
@@ -266,7 +266,7 @@ export default function SettingsPage() {
                     : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600"
                 }`}
               >
-                <span className={`text-sm font-semibold ${locale === opt.value ? "text-[#E23D28]" : "text-stone-700 dark:text-stone-300"}`}>
+                <span className={`text-sm font-semibold ${locale === opt.value ? "text-[#E23D28]" : "lg-ink"}`}>
                   {opt.label}
                 </span>
                 <span className="text-[11px] text-stone-400 mt-0.5">{opt.sub}</span>
@@ -277,7 +277,7 @@ export default function SettingsPage() {
 
         {/* Notifications */}
         <div className="card-premium p-5">
-          <h2 className="font-bold text-stone-800 dark:text-stone-200 mb-4 flex items-center gap-2">
+          <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
@@ -310,10 +310,10 @@ export default function SettingsPage() {
                     : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600"
                 }`}
               >
-                <span className={notifyMethod === opt.value ? "text-[#E23D28]" : "text-stone-500 dark:text-stone-400"}>
+                <span className={notifyMethod === opt.value ? "text-[#E23D28]" : "lg-ink-2"}>
                   {opt.icon}
                 </span>
-                <span className={`text-xs font-medium ${notifyMethod === opt.value ? "text-[#E23D28]" : "text-stone-600 dark:text-stone-400"}`}>
+                <span className={`text-xs font-medium ${notifyMethod === opt.value ? "text-[#E23D28]" : "lg-ink-2"}`}>
                   {opt.label}
                 </span>
               </button>
@@ -330,7 +330,7 @@ export default function SettingsPage() {
               已儲存
             </div>
           )}
-          <p className="mt-3 text-[11px] text-stone-400 dark:text-stone-500 text-center">
+          <p className="mt-3 text-[11px] lg-ink-3 text-center">
             {notifyMethod === "email" ? "訂單狀態更新時將發送 Email 通知" :
              notifyMethod === "push" ? "訂單狀態更新時將發送推播通知" :
              "已關閉訂單通知"}
@@ -340,7 +340,7 @@ export default function SettingsPage() {
         {/* Test Notification */}
         {student && notifyMethod !== "none" && (
           <div className="card-premium p-5">
-            <h2 className="font-bold text-stone-800 dark:text-stone-200 mb-4 flex items-center gap-2">
+            <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
                 <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
               </svg>
@@ -362,7 +362,7 @@ export default function SettingsPage() {
                   } catch { alert("網路錯誤"); }
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-[#E23D28] dark:hover:border-[#E23D28] text-stone-700 dark:text-stone-300 hover:text-[#E23D28] text-sm font-medium transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-[#E23D28] dark:hover:border-[#E23D28] lg-ink hover:text-[#E23D28] text-sm font-medium transition-all"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
@@ -374,7 +374,7 @@ export default function SettingsPage() {
 
         {/* Location */}
         <div className="card-premium p-5">
-          <h2 className="font-bold text-stone-800 dark:text-stone-200 mb-4 flex items-center gap-2">
+          <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
               <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/>
             </svg>
@@ -382,8 +382,8 @@ export default function SettingsPage() {
           </h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-stone-700 dark:text-stone-300">定位服務</p>
-              <p className="text-[11px] text-stone-400 dark:text-stone-500 mt-0.5">下單時用於確認在校園範圍內</p>
+              <p className="text-sm font-medium lg-ink">定位服務</p>
+              <p className="text-[11px] lg-ink-3 mt-0.5">下單時用於確認在校園範圍內</p>
             </div>
             <button
               onClick={async () => {
@@ -399,7 +399,7 @@ export default function SettingsPage() {
                   else alert("無法取得定位");
                 }
               }}
-              className="px-4 py-2 rounded-xl border-2 border-stone-200 dark:border-stone-700 text-sm font-medium text-stone-700 dark:text-stone-300 hover:border-[#E23D28] hover:text-[#E23D28] transition-all"
+              className="px-4 py-2 rounded-xl border-2 border-stone-200 dark:border-stone-700 text-sm font-medium lg-ink hover:border-[#E23D28] hover:text-[#E23D28] transition-all"
             >
               檢查權限
             </button>
@@ -408,7 +408,7 @@ export default function SettingsPage() {
 
         {/* Admin Contact */}
         <div className="card-premium p-5">
-          <h2 className="font-bold text-stone-800 dark:text-stone-200 mb-4 flex items-center gap-2">
+          <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
             </svg>
@@ -424,7 +424,7 @@ export default function SettingsPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
               </svg>
-              <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Instagram</span>
+              <span className="text-xs font-medium lg-ink-2">Instagram</span>
             </a>
             <a
               href="mailto:pyps0990@gmail.com"
@@ -433,7 +433,7 @@ export default function SettingsPage() {
               <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
                 <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
               </svg>
-              <span className="text-xs font-medium text-stone-600 dark:text-stone-400">Gmail</span>
+              <span className="text-xs font-medium lg-ink-2">Gmail</span>
             </a>
           </div>
         </div>
@@ -456,31 +456,31 @@ export default function SettingsPage() {
 
       {pushPromptMounted && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowPushPrompt(false)}>
-          <div className={`absolute inset-0 bg-black/40 backdrop-blur-sm ${pushPromptClosing ? "animate-backdrop-out" : "animate-backdrop-in"}`} />
-          <div className={`relative w-full max-w-sm mx-4 mb-4 sm:mb-0 bg-white dark:bg-stone-900 rounded-2xl shadow-2xl overflow-hidden ${pushPromptClosing ? "animate-modal-out" : "animate-modal-in"}`} onClick={(e) => e.stopPropagation()}>
+          <div className={`absolute inset-0 bg-black/25 ${pushPromptClosing ? "animate-backdrop-out" : "animate-backdrop-in"}`} />
+          <div className={`relative w-full max-w-sm mx-4 mb-4 sm:mb-0 lg-thick rounded-[30px] overflow-hidden ${pushPromptClosing ? "animate-modal-out" : "animate-modal-in"}`} onClick={(e) => e.stopPropagation()}>
             <div className="p-6 text-center">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-2xl flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-[22px] flex items-center justify-center">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-stone-800 dark:text-stone-200 mb-2">
+              <h3 className="text-lg font-bold lg-ink mb-2">
                 不再錯過取餐時間
               </h3>
-              <p className="text-sm text-stone-500 dark:text-stone-400 leading-relaxed">
+              <p className="text-sm lg-ink-2 leading-relaxed">
                 開啟推播通知後，訂單確認、餐點完成時會即時提醒你，不用一直重新整理頁面
               </p>
             </div>
             <div className="px-6 pb-6 space-y-2">
               <button
                 onClick={confirmPush}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#E23D28] to-[#FF6B35] text-white font-semibold shadow-lg active:scale-[0.98] transition-all duration-150"
+                className="w-full py-3.5 rounded-xl lg-tinted font-semibold shadow-lg active:scale-[0.98] transition-all duration-150"
               >
                 好，開啟通知
               </button>
               <button
                 onClick={() => setShowPushPrompt(false)}
-                className="w-full py-3 rounded-xl text-stone-500 dark:text-stone-400 text-sm font-medium hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                className="w-full py-3 rounded-xl lg-ink-2 text-sm font-medium hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
               >
                 先不用
               </button>

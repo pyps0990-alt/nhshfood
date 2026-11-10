@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
     }
 
     const walletRef = adminDb.collection("wallets").doc(parsed.data.studentId);
-    let walletSnap = await walletRef.get();
+    const walletSnap = await walletRef.get();
 
     if (!walletSnap.exists) {
       const walletCode = await generateUniqueWalletCode();

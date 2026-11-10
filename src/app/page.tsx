@@ -11,6 +11,7 @@ import { getDeptConfig } from "@/lib/department";
 import { prefetchMenu, preloadLocation } from "@/lib/hooks";
 import { useExitAnimation } from "@/lib/useExitAnimation";
 import { useEffect, useState, useCallback } from "react";
+import { taipeiHour } from "@/lib/time";
 
 export default function Home() {
   const router = useRouter();
@@ -56,86 +57,90 @@ export default function Home() {
     router.push(`/${dept}`);
   }
 
+  const hour = taipeiHour(new Date());
+  const greeting = hour < 11 ? "早安" : hour < 14 ? "午安" : hour < 18 ? "下午好" : "晚安";
+  const name = student ? student.displayName || student.studentName : null;
+
   return (
     <div className="flex-1 flex flex-col">
-      <header className="sticky top-0 z-20 glass dark:bg-stone-900/85 border-b border-stone-200/50 dark:border-stone-800 px-4 py-2.5">
-        {student ? (
-          <div className="flex items-center justify-between max-w-lg mx-auto">
-            <Link href="/settings" className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {(student.displayName || student.studentName).charAt(0)}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-stone-800 dark:text-stone-200 truncate">{student.displayName || student.studentName}</p>
-                <p className="text-[11px] text-stone-400 truncate">{student.className} · {student.studentId}</p>
-              </div>
+      {/* Top bar: profile + quick actions */}
+      <header className="lg-nav" data-scrolled="false">
+        <div className="max-w-lg mx-auto h-[56px] px-4 flex items-center justify-between gap-2">
+          {student ? (
+            <Link href="/settings" className="flex items-center gap-2.5 min-w-0 lg-thin rounded-full pl-1 pr-3.5 py-1">
+              <span className="w-8 h-8 rounded-full lg-tinted grid place-items-center text-[13px] font-bold shrink-0">
+                {(name || "?").charAt(0)}
+              </span>
+              <span className="min-w-0 leading-tight">
+                <span className="block text-[13px] font-semibold lg-ink truncate">{name}</span>
+                <span className="block text-[11px] lg-ink-3 truncate">{student.className} · {student.studentId}</span>
+              </span>
             </Link>
-            <div className="flex items-center gap-1 shrink-0">
-              <Link href="/wallet" className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-semibold px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
-                <IconWallet size={14} />
-                {balance !== null ? (
-                  <span className="font-mono font-bold">${balance}</span>
-                ) : (
-                  <span>{t("wallet")}</span>
-                )}
+          ) : (
+            <Link href="/login" className="lg-btn lg-btn-sm lg-thin lg-ink">
+              <IconSchool size={16} />
+              {t("login_to_order")}
+              <IconChevronRight size={14} className="lg-brand" />
+            </Link>
+          )}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {student && (
+              <Link href="/wallet" className="lg-btn lg-btn-sm lg-thin !text-amber-700 dark:!text-amber-300" aria-label="錢包">
+                <IconWallet size={15} />
+                <span className="tabular-nums font-bold">{balance !== null ? `$${balance}` : t("wallet")}</span>
               </Link>
-              <Link href="/settings" className="p-2 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                <IconSettings size={16} />
-              </Link>
-              <button onClick={logout} className="p-2 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+            )}
+            <Link href="/settings" aria-label={t("settings")} className="lg-btn lg-btn-icon lg-thin lg-ink-2 !w-9 !min-h-9">
+              <IconSettings size={17} />
+            </Link>
+            {student && (
+              <button onClick={logout} aria-label={t("logout")} className="lg-btn lg-btn-icon lg-thin lg-ink-2 !w-9 !min-h-9">
                 <IconLogOut size={16} />
               </button>
-            </div>
+            )}
           </div>
-        ) : (
-          <div className="flex items-center justify-between max-w-lg mx-auto">
-            <Link href="/login" className="flex items-center gap-2">
-              <IconSchool className="text-stone-500" />
-              <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">{t("login_to_order")}</span>
-              <IconChevronRight className="text-[#E23D28]" />
-            </Link>
-            <Link href="/settings" className="p-2 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-              <IconSettings size={16} />
-            </Link>
-          </div>
-        )}
+        </div>
       </header>
 
-      <main className="flex-1 flex flex-col px-6 py-8 max-w-lg mx-auto w-full">
-        <h1 className="text-2xl font-black text-value mb-6">{t("app_name")}</h1>
-
-        {/* Department buttons — vertical stack, large cards */}
-        <div className="flex flex-col gap-3">
-          <button onClick={() => handleDeptClick("breakfast")}
-            className="relative flex flex-col items-center gap-3 p-8 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/20 border border-red-200/60 dark:border-red-800/40 rounded-2xl hover:border-red-300 dark:hover:border-red-700 active:scale-[0.98] transition-all duration-150">
-            {!student && (
-              <span className="absolute top-3 right-3 text-[10px] font-bold bg-stone-700 dark:bg-stone-600 text-white px-2 py-0.5 rounded-md">需登入</span>
-            )}
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#E23D28" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 11H3a1 1 0 01-1-1 8 8 0 018-8h8a1 1 0 011 1 8 8 0 01-2 5.3"/><path d="M21 10.5c.5.5 1 1.6 1 2.5a4 4 0 01-4 4H6"/><path d="M3 21h18"/><path d="M3 17h18"/>
-            </svg>
-            <div className="text-center">
-              <span className="text-xl font-bold text-[#E23D28]">{t("breakfast")}</span>
-              <p className="text-sm text-stone-400 dark:text-stone-500 mt-0.5">{t("breakfast_hours")}</p>
-            </div>
-          </button>
-
-          <button onClick={() => handleDeptClick("lunch")}
-            className="relative flex flex-col items-center gap-3 p-8 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-800/40 rounded-2xl hover:border-orange-300 dark:hover:border-orange-700 active:scale-[0.98] transition-all duration-150">
-            {!student && (
-              <span className="absolute top-3 right-3 text-[10px] font-bold bg-stone-700 dark:bg-stone-600 text-white px-2 py-0.5 rounded-md">需登入</span>
-            )}
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
-            </svg>
-            <div className="text-center">
-              <span className="text-xl font-bold text-[#FF6B35]">{t("lunch")}</span>
-              <p className="text-sm text-stone-400 dark:text-stone-500 mt-0.5">{t("lunch_hours")}</p>
-            </div>
-          </button>
+      <main className="flex-1 flex flex-col px-5 pt-4 pb-8 max-w-lg mx-auto w-full">
+        <div className="lg-rise">
+          <p className="text-[15px] font-semibold lg-ink-2">{name ? `${greeting}，${name}` : greeting}</p>
+          <h1 className="lg-large-title lg-ink mt-0.5">{t("app_name")}</h1>
         </div>
 
-        {/* Cart — always visible */}
+        {/* Department tiles */}
+        <div className="grid grid-cols-1 gap-3.5 mt-6">
+          {([
+            { key: "breakfast", color: "#E23D28", glow: "rgba(226,61,40,0.35)", icon: <path d="M17 11H3a1 1 0 01-1-1 8 8 0 018-8h8a1 1 0 011 1 8 8 0 01-2 5.3M21 10.5c.5.5 1 1.6 1 2.5a4 4 0 01-4 4H6M3 21h18M3 17h18" /> },
+            { key: "lunch", color: "#FF6B35", glow: "rgba(255,107,53,0.35)", icon: <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" /> },
+          ] as const).map((d, i) => (
+            <button
+              key={d.key}
+              onClick={() => handleDeptClick(d.key)}
+              className="lg-card lg-hover lg-rise text-left overflow-hidden p-5 flex items-center gap-4 active:scale-[0.98]"
+              style={{ animationDelay: `${0.06 + i * 0.06}s` }}
+            >
+              <span
+                aria-hidden="true"
+                className="absolute -right-10 -top-10 w-40 h-40 rounded-full blur-2xl"
+                style={{ background: d.glow }}
+              />
+              <span className="relative w-16 h-16 rounded-[22px] grid place-items-center shrink-0 lg-thin" style={{ color: d.color }}>
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">{d.icon}</svg>
+              </span>
+              <span className="relative flex-1 min-w-0">
+                <span className="block text-[22px] font-bold tracking-tight" style={{ color: d.color }}>{t(d.key)}</span>
+                <span className="block text-[13px] lg-ink-2 mt-0.5">{t(`${d.key}_hours`)}</span>
+              </span>
+              <span className="relative flex flex-col items-end gap-1.5">
+                {!student && <span className="lg-status" data-s="picked_up">需登入</span>}
+                <IconChevronRight size={20} className="lg-ink-3" />
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Cart summary */}
         <button
           onClick={() => {
             if (cartCount === 0) return;
@@ -143,46 +148,45 @@ export default function Home() {
             if (cartDepts.length > 1) { setShowDeptPicker(true); return; }
             router.push(`/${cartDepts[0]}?cart=1`);
           }}
-          className={`mt-4 flex items-center justify-between rounded-2xl px-5 py-3.5 font-semibold shadow-md active:scale-[0.98] transition-all duration-150 ${
-            cartCount > 0
-              ? "bg-gradient-to-r from-[#E23D28] to-[#FF6B35] text-white"
-              : "bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 shadow-none cursor-default"
+          disabled={cartCount === 0}
+          className={`mt-4 h-[58px] flex items-center justify-between rounded-full pl-2.5 pr-5 font-semibold transition-all duration-300 lg-rise ${
+            cartCount > 0 ? "lg-tinted active:scale-[0.98]" : "lg-thin lg-ink-3 cursor-default"
           }`}
+          style={{ animationDelay: "0.18s" }}
         >
-          <span className="flex items-center gap-2.5">
-            <IconShoppingBag size={16} />
+          <span className="flex items-center gap-3">
+            <span className={`w-10 h-10 rounded-full grid place-items-center ${cartCount > 0 ? "bg-white/22" : "bg-black/5 dark:bg-white/5"}`}>
+              <IconShoppingBag size={18} />
+            </span>
             <span>{t("cart")}</span>
             {cartDepts.length > 1 && (
-              <span className={cartCount > 0 ? "text-white/70 text-xs" : "text-stone-400 text-xs"}>
-                ({cartDepts.map(d => t(d === "breakfast" ? "breakfast" : "lunch")).join(" + ")})
-              </span>
+              <span className="text-xs opacity-75">({cartDepts.map((d) => t(d === "breakfast" ? "breakfast" : "lunch")).join(" + ")})</span>
             )}
           </span>
-          <span className={`rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold ${
-            cartCount > 0 ? "bg-white/20" : "bg-stone-200 dark:bg-stone-700"
-          }`}>{cartCount}</span>
+          <span className="tabular-nums text-[17px] font-bold">{cartCount > 0 ? `${cartCount} 件` : "空的"}</span>
         </button>
 
-        {/* Order lookup — secondary action, pushed down */}
-        <div className="mt-auto pt-8">
+        <div className="mt-auto pt-10">
           <OrderLookup />
         </div>
 
-        <footer className="text-center text-xs text-stone-400 dark:text-stone-600 pt-6 pb-2">
-          &copy; 2025 {t("copyright")}
+        <footer className="text-center text-[11px] lg-ink-3 pt-6 pb-2">
+          &copy; {new Date().getFullYear()} {t("copyright")}
         </footer>
       </main>
 
       {deptPickerMounted && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowDeptPicker(false)}>
-          <div className={`absolute inset-0 bg-black/40 backdrop-blur-sm ${deptPickerClosing ? "animate-backdrop-out" : "animate-backdrop-in"}`} />
+          <div className={`absolute inset-0 bg-black/25 ${deptPickerClosing ? "animate-backdrop-out" : "animate-backdrop-in"}`} />
           <div
-            className={`relative w-full max-w-sm mx-4 mb-4 sm:mb-0 bg-white dark:bg-stone-900 rounded-2xl shadow-2xl overflow-hidden ${deptPickerClosing ? "animate-modal-out" : "animate-modal-in"}`}
+            className={`relative w-full max-w-sm mx-3 mb-3 sm:mb-0 lg-thick rounded-[30px] overflow-hidden ${deptPickerClosing ? "animate-modal-out" : "animate-modal-in"}`}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="選擇要查看的購物車"
           >
-            <div className="p-5 pb-2">
-              <h3 className="text-base font-bold text-stone-800 dark:text-stone-200">選擇要查看的購物車</h3>
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">兩個部門都有品項，請選擇一個</p>
+            <div className="px-5 pt-5 pb-2">
+              <h3 className="text-[17px] font-bold lg-ink">選擇要查看的購物車</h3>
+              <p className="text-[13px] lg-ink-3 mt-1">兩個部門都有品項，請選擇一個</p>
             </div>
             <div className="p-3 space-y-2">
               {cartDepts.map((dept) => {
@@ -193,27 +197,20 @@ export default function Home() {
                   <button
                     key={dept}
                     onClick={() => { setShowDeptPicker(false); router.push(`/${dept}?cart=1`); }}
-                    className={`w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 transition-all duration-150 active:scale-[0.98] ${
-                      dept === "breakfast"
-                        ? "border-red-200/70 dark:border-red-800/40 bg-red-50/60 dark:bg-red-950/20 hover:border-red-300 dark:hover:border-red-700"
-                        : "border-orange-200/70 dark:border-orange-800/40 bg-orange-50/60 dark:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-700"
-                    }`}
+                    className="w-full flex items-center justify-between gap-3 p-4 rounded-[20px] lg-thin active:scale-[0.98] transition-transform"
                   >
                     <span className={`font-bold ${cfg.btnText}`}>{cfg.label}</span>
-                    <span className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                      <span>{deptCount} 件・${deptTotal}</span>
+                    <span className="flex items-center gap-2 text-sm lg-ink-2">
+                      <span className="tabular-nums">{deptCount} 件・${deptTotal}</span>
                       <IconChevronRight size={14} className={cfg.btnText} />
                     </span>
                   </button>
                 );
               })}
             </div>
-            <button
-              onClick={() => setShowDeptPicker(false)}
-              className="w-full py-3.5 text-stone-500 dark:text-stone-400 text-sm font-medium hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-t border-stone-100 dark:border-stone-800"
-            >
-              取消
-            </button>
+            <div className="p-3 pt-0">
+              <button onClick={() => setShowDeptPicker(false)} className="lg-btn w-full lg-thin lg-ink-2">取消</button>
+            </div>
           </div>
         </div>
       )}

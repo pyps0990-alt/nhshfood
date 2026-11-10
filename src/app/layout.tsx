@@ -8,7 +8,11 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: "#E23D28",
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fff6ef" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0b0a" },
+  ],
 };
 
 export const metadata: Metadata = {
@@ -17,7 +21,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "熱食部",
   },
 };
@@ -40,7 +44,8 @@ export default function RootLayout({
           document.documentElement.classList.add('dark')}catch{}
         `}} />
       </head>
-      <body className="min-h-full flex flex-col bg-[#FFF8F0] dark:bg-stone-950 font-[family-name:var(--font-geist)] transition-colors duration-300">
+      <body className="min-h-full flex flex-col transition-colors duration-300">
+        <div className="lg-backdrop" aria-hidden="true" />
         <Providers>{children}</Providers>
         <SpeedInsights />
         <Analytics />

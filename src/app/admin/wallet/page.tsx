@@ -283,7 +283,7 @@ export default function WalletAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-950 text-stone-100 p-4 md:p-8">
+    <div className="min-h-screen lg-dark-stage text-stone-100 p-4 md:p-8">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <BackButton href="/admin/hub" variant="light" />
@@ -305,12 +305,12 @@ export default function WalletAdminPage() {
             placeholder="搜尋學號 / 姓名 / 班級"
             value={listSearch}
             onChange={(e) => setListSearch(e.target.value)}
-            className="flex-1 px-4 py-2 bg-stone-900 border border-stone-700 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="flex-1 px-4 py-2 lg-smoke border border-white/10 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <button
             onClick={fetchList}
             disabled={listLoading}
-            className="px-4 py-2 bg-stone-800 hover:bg-stone-700 border border-stone-700 rounded-lg font-medium disabled:opacity-50 transition-colors text-sm"
+            className="px-4 py-2 bg-white/8 hover:bg-white/15 border border-white/10 rounded-lg font-medium disabled:opacity-50 transition-colors text-sm"
             title="重新整理"
           >{listLoading ? "…" : "↻"}</button>
         </div>
@@ -324,14 +324,14 @@ export default function WalletAdminPage() {
               className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all border ${
                 filter === opt.key
                   ? "bg-amber-500 text-stone-950 border-amber-500 shadow-sm"
-                  : "bg-stone-900 text-stone-400 border-stone-700 hover:bg-stone-800"
+                  : "lg-smoke text-stone-400 border-white/10 hover:bg-white/10"
               }`}
             >{opt.label}</button>
           ))}
         </div>
 
         {/* Wallet list */}
-        <div className="mb-6 bg-stone-900 border border-stone-700 rounded-lg overflow-hidden">
+        <div className="mb-6 lg-smoke border border-white/10 rounded-lg overflow-hidden">
           {listLoading && wallets.length === 0 ? (
             <p className="p-4 text-sm text-stone-500">錢包列表載入中…</p>
           ) : filteredWallets.length === 0 ? (
@@ -347,7 +347,7 @@ export default function WalletAdminPage() {
                     key={w.studentId}
                     onClick={() => openWallet(w.studentId)}
                     className={`w-full flex items-center justify-between px-4 py-3 text-left text-sm transition-colors ${
-                      isSelected ? "bg-amber-950/30" : "hover:bg-stone-800/70"
+                      isSelected ? "bg-amber-950/30" : "hover:bg-white/10/70"
                     }`}
                   >
                     <div className="min-w-0 flex-1">
@@ -355,7 +355,7 @@ export default function WalletAdminPage() {
                         <span className="font-mono font-bold text-stone-100">{w.studentId}</span>
                         {w.studentName && <span className="text-stone-300">{w.studentName}</span>}
                         {w.className && <span className="text-xs text-stone-500">{w.className}</span>}
-                        {isClosed && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-stone-700 text-stone-300">已結清</span>}
+                        {isClosed && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/12 text-stone-300">已結清</span>}
                         {isLow && <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-900/50 text-amber-300">低餘額</span>}
                       </div>
                     </div>
@@ -382,7 +382,7 @@ export default function WalletAdminPage() {
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && searchStudent()}
-              className="flex-1 px-4 py-2 bg-stone-900 border border-stone-700 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="flex-1 px-4 py-2 lg-smoke border border-white/10 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
             <button
               onClick={searchStudent}
@@ -408,7 +408,7 @@ export default function WalletAdminPage() {
         {wallet && (
           <>
             {/* Wallet Info */}
-            <div className="mb-6 p-4 bg-stone-900 border border-stone-700 rounded-lg">
+            <div className="mb-6 p-4 lg-smoke border border-white/10 rounded-lg">
               <h2 className="text-lg font-semibold mb-3">錢包資訊</h2>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
@@ -427,7 +427,7 @@ export default function WalletAdminPage() {
             </div>
 
             {/* Top-up Form */}
-            <div className="mb-6 p-4 bg-stone-900 border border-stone-700 rounded-lg">
+            <div className="mb-6 p-4 lg-smoke border border-white/10 rounded-lg">
               <h2 className="text-lg font-semibold mb-3">儲值</h2>
               <div className="space-y-3">
                 <div className="flex gap-2">
@@ -438,12 +438,12 @@ export default function WalletAdminPage() {
                     onChange={(e) => setTopUpAmount(e.target.value)}
                     min={1}
                     max={10000}
-                    className="flex-1 px-4 py-2 bg-stone-800 border border-stone-600 rounded-lg text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="flex-1 px-4 py-2 bg-white/8 border border-stone-600 rounded-lg text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
                   <select
                     value={topUpMethod}
                     onChange={(e) => setTopUpMethod(e.target.value)}
-                    className="px-4 py-2 bg-stone-800 border border-stone-600 rounded-lg text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="px-4 py-2 bg-white/8 border border-stone-600 rounded-lg text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
                     <option value="cash">現金</option>
                     <option value="bank_transfer">銀行轉帳</option>
@@ -456,7 +456,7 @@ export default function WalletAdminPage() {
                   value={topUpNote}
                   onChange={(e) => setTopUpNote(e.target.value)}
                   maxLength={200}
-                  className="w-full px-4 py-2 bg-stone-800 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  className="w-full px-4 py-2 bg-white/8 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <button
                   onClick={handleTopUp}
@@ -489,7 +489,7 @@ export default function WalletAdminPage() {
 
             {/* Close wallet / refund  OR  Reactivate closed wallet */}
             {wallet.closedAt ? (
-              <div className="mb-6 p-4 bg-stone-900 border border-emerald-800/60 rounded-lg">
+              <div className="mb-6 p-4 lg-smoke border border-emerald-800/60 rounded-lg">
                 <h2 className="text-lg font-semibold mb-1 text-emerald-300">此錢包已結清</h2>
                 <p className="text-xs text-stone-400 mb-3">
                   結清時間：{new Date(wallet.closedAt).toLocaleString("zh-TW")}
@@ -503,7 +503,7 @@ export default function WalletAdminPage() {
                 </button>
               </div>
             ) : (
-            <div className="mb-6 p-4 bg-stone-900 border border-red-800/60 rounded-lg">
+            <div className="mb-6 p-4 lg-smoke border border-red-800/60 rounded-lg">
               <h2 className="text-lg font-semibold mb-1 text-red-300">結清錢包（退費）</h2>
               <p className="text-xs text-stone-400 mb-3">學生離校 / 轉學 / 畢業時使用。錢包歸零並產生退費碼。</p>
               {!confirmClose ? (
@@ -522,12 +522,12 @@ export default function WalletAdminPage() {
                     value={closeReason}
                     onChange={(e) => setCloseReason(e.target.value)}
                     maxLength={200}
-                    className="w-full px-4 py-2 bg-stone-800 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-red-500"
+                    className="w-full px-4 py-2 bg-white/8 border border-stone-600 rounded-lg text-stone-100 placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-red-500"
                   />
                   <div className="flex gap-2">
                     <button
                       onClick={() => setConfirmClose(false)}
-                      className="flex-1 py-2 bg-stone-800 hover:bg-stone-700 rounded-lg font-medium transition-colors"
+                      className="flex-1 py-2 bg-white/8 hover:bg-white/15 rounded-lg font-medium transition-colors"
                     >取消</button>
                     <button
                       onClick={handleClose}
@@ -541,12 +541,12 @@ export default function WalletAdminPage() {
             )}
 
             {/* Transactions */}
-            <div className="p-4 bg-stone-900 border border-stone-700 rounded-lg">
+            <div className="p-4 lg-smoke border border-white/10 rounded-lg">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-lg font-semibold">交易紀錄</h2>
                 <button
                   onClick={downloadHistoryCsv}
-                  className="px-3 py-1.5 text-xs bg-stone-800 hover:bg-stone-700 border border-stone-600 rounded-lg font-medium transition-colors flex items-center gap-1.5"
+                  className="px-3 py-1.5 text-xs bg-white/8 hover:bg-white/15 border border-stone-600 rounded-lg font-medium transition-colors flex items-center gap-1.5"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   下載 CSV
@@ -559,7 +559,7 @@ export default function WalletAdminPage() {
                   {transactions.map((tx) => (
                     <div
                       key={tx.id}
-                      className="flex items-center justify-between p-3 bg-stone-800 rounded-lg text-sm"
+                      className="flex items-center justify-between p-3 bg-white/8 rounded-lg text-sm"
                     >
                       <div>
                         <span
@@ -612,10 +612,10 @@ function StatTile({ label, value, tone }: { label: string; value: string; tone?:
     tone === "ok"
       ? "bg-emerald-950/40 border-emerald-800 text-emerald-300"
       : tone === "dim"
-      ? "bg-stone-900 border-stone-700 text-stone-400"
+      ? "lg-smoke border-white/10 text-stone-400"
       : tone === "highlight"
       ? "bg-amber-950/40 border-amber-800 text-amber-300"
-      : "bg-stone-900 border-stone-700 text-stone-200";
+      : "lg-smoke border-white/10 text-stone-200";
   return (
     <div className={`border rounded-lg px-3 py-2 ${cls}`}>
       <p className="text-[10px] opacity-70">{label}</p>

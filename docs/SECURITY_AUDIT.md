@@ -1,5 +1,7 @@
 # 內湖高中熱食部 — 安全與功能稽核（2026-11-10）
 
+> **狀態：** 下列項目已全部在 `feat/liquid-glass-ecpay-security` 分支修正，F6 除外（lint 錯誤多為既有的 React Compiler 規則，不影響建置）。驗證方式見文末。
+
 範圍：`main` @ `822156c`（與 Vercel production 部署相同）。
 嚴重度：🔴 嚴重（可直接造成金錢損失或越權）、🟠 高、🟡 中、⚪ 低／功能 bug。
 
@@ -47,3 +49,9 @@
 ## 四、Firestore 規則部署提醒
 
 `firestore.rules` 不會隨 Vercel 部署。本次修改後，後台已不再需要 client 端 `list` 訂單，請在 Firebase Console 或 `firebase deploy --only firestore:rules` 部署新版規則，才能真正關閉 A13。
+
+## 五、驗證
+
+- `npm test`：綠界 CheckMacValue 對官方測試向量（`6C51C9E6…B840`）。
+- 金流整合測試（30 項，對訂單 / 付款模組實際執行）：錢包扣款與庫存同交易、重複取消只退一次、取消後不可改回待確認、網路重送冪等、已結清錢包拒絕扣款、綠界金額 / 特店不符拒絕、通知重送不重複入帳、逾時後才付款轉入錢包、兩次付款嘗試都成功時重複款轉錢包、竄改金額的回呼被拒、學生 token 無法當管理員 token。
+- HTTP 層：原本開放的 10 個端點皆回 401；學生 token 放進 `admin_token` 回 401；跨站 POST 回 403；綠界回呼仍可跨站送達。

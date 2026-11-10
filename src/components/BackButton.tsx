@@ -7,16 +7,16 @@ interface BackButtonProps {
   variant?: "light" | "dark";
 }
 
+/** Legacy API kept for older pages; renders the glass back button. */
 export function BackButton({ href, variant = "dark" }: BackButtonProps) {
-  const base = "w-9 h-9 flex items-center justify-center rounded-full transition-all duration-150 shrink-0 active:scale-90";
-  const style = variant === "light"
-    ? `${base} bg-white/20 hover:bg-white/30 active:bg-white/40 text-white`
-    : `${base} bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 active:bg-stone-300 dark:active:bg-stone-600 text-stone-600 dark:text-stone-400`;
-
+  const cls =
+    variant === "light"
+      ? "lg-btn lg-btn-icon !w-[38px] !min-h-[38px] bg-white/20 text-white"
+      : "lg-btn lg-btn-icon !w-[38px] !min-h-[38px] lg-thin lg-ink";
   return (
-    <Link href={href} className={style}>
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M15 18l-6-6 6-6"/>
+    <Link href={href} aria-label="返回" className={cls}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M15 18l-6-6 6-6" />
       </svg>
     </Link>
   );

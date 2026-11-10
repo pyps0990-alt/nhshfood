@@ -40,7 +40,7 @@ function FillButton({ onReady, label = "下一步" }: { onReady: () => void; lab
     <button
       onClick={ready ? onReady : undefined}
       disabled={!ready}
-      className={`relative mt-8 w-full max-w-xs h-14 rounded-2xl font-bold text-lg overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/40 ${
+      className={`relative mt-8 w-full max-w-xs h-14 rounded-[22px] font-bold text-lg overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/40 ${
         ready
           ? "bg-white text-[#E23D28] shadow-xl active:scale-[0.97] cursor-pointer"
           : "bg-white/20 text-white/40 cursor-not-allowed"
@@ -48,7 +48,7 @@ function FillButton({ onReady, label = "下一步" }: { onReady: () => void; lab
     >
       {!ready && (
         <div
-          className="absolute inset-0 bg-white/30 rounded-2xl transition-none"
+          className="absolute inset-0 bg-white/30 rounded-[22px] transition-none"
           style={{ width: `${progress * 100}%` }}
         />
       )}
@@ -56,7 +56,7 @@ function FillButton({ onReady, label = "下一步" }: { onReady: () => void; lab
     </button>
   );
 }
-const INPUT_CLASS = "w-full px-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/50 transition-all";
+const INPUT_CLASS = "w-full px-4 py-3 bg-white/10 border border-white/20 rounded-[22px] text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/50 transition-all";
 const LABEL_CLASS = "block text-sm font-semibold text-white/90 mb-1.5";
 
 /* ── Progress Bar ── */
@@ -95,7 +95,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       </p>
       <button
         onClick={onNext}
-        className="mt-10 w-full max-w-xs h-14 rounded-2xl font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150 ob-btn-hint"
+        className="mt-10 w-full max-w-xs h-14 rounded-[22px] font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150 ob-btn-hint"
       >
         開始
       </button>
@@ -170,7 +170,7 @@ function DemoMenu() {
               <div className="text-[11px] font-bold text-stone-800">培根蛋餅</div>
               <div className="text-xs font-black text-stone-900 mt-0.5">$40</div>
             </div>
-            <button className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all duration-300 ${added ? "bg-emerald-500 text-white" : "bg-[#E23D28] text-white"}`}>
+            <button className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all duration-300 ${added ? "bg-emerald-500 text-white" : "lg-tinted"}`}>
               {added ? "已加入" : "+ 加入"}
             </button>
           </div>
@@ -181,7 +181,7 @@ function DemoMenu() {
               <div className="text-[11px] font-bold text-stone-800">總匯三明治</div>
               <div className="text-xs font-black text-stone-900 mt-0.5">$50</div>
             </div>
-            <button className="px-3 py-1 rounded-lg bg-[#E23D28] text-white text-[9px] font-bold">+ 加入</button>
+            <button className="px-3 py-1 rounded-lg lg-tinted text-[9px] font-bold">+ 加入</button>
           </div>
         </div>
         <div className="bg-white rounded-lg p-2.5 border border-stone-100">
@@ -190,7 +190,7 @@ function DemoMenu() {
               <div className="text-[11px] font-bold text-stone-800">大冰奶</div>
               <div className="text-xs font-black text-stone-900 mt-0.5">$25</div>
             </div>
-            <button className="px-3 py-1 rounded-lg bg-[#E23D28] text-white text-[9px] font-bold">+ 加入</button>
+            <button className="px-3 py-1 rounded-lg lg-tinted text-[9px] font-bold">+ 加入</button>
           </div>
         </div>
       </div>
@@ -264,7 +264,7 @@ function StepRegister({ onSuccess, onLogin }: { onSuccess: () => void; onLogin: 
         <p className="text-white/50 text-sm mb-5">僅限內湖高中師生</p>
 
         {/* Role toggle */}
-        <div className="flex gap-2 mb-5 bg-white/10 rounded-2xl p-1">
+        <div className="flex gap-2 mb-5 bg-white/10 rounded-[22px] p-1">
           {(["student", "teacher"] as const).map(r => (
             <button
               key={r}
@@ -345,7 +345,7 @@ function StepRegister({ onSuccess, onLogin }: { onSuccess: () => void; onLogin: 
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="w-full h-14 rounded-2xl font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150 disabled:opacity-50 mt-2">
+          <button type="submit" disabled={loading} className="w-full h-14 rounded-[22px] font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150 disabled:opacity-50 mt-2">
             {loading ? "註冊中..." : "註冊帳號"}
           </button>
         </form>
@@ -397,7 +397,7 @@ function StepPermissions({ onNext }: { onNext: () => void }) {
         <button
           onClick={requestLocation}
           disabled={locStatus !== "idle"}
-          className={`w-full flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 ${
+          className={`w-full flex items-center gap-4 p-5 rounded-[22px] border transition-all duration-200 ${
             locStatus === "granted"
               ? "bg-emerald-500/20 border-emerald-400/40"
               : locStatus === "denied"
@@ -427,7 +427,7 @@ function StepPermissions({ onNext }: { onNext: () => void }) {
         <button
           onClick={requestNotification}
           disabled={notifStatus !== "idle"}
-          className={`w-full flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 ${
+          className={`w-full flex items-center gap-4 p-5 rounded-[22px] border transition-all duration-200 ${
             notifStatus === "granted"
               ? "bg-emerald-500/20 border-emerald-400/40"
               : notifStatus === "denied"
@@ -549,7 +549,7 @@ function StepPersonalize({ onFinish }: { onFinish: () => void }) {
 
         <button
           onClick={handleFinish}
-          className="w-full h-14 rounded-2xl font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150"
+          className="w-full h-14 rounded-[22px] font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150"
         >
           開始使用
         </button>

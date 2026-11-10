@@ -36,7 +36,7 @@ export function OrderAnimation({
 
       <button
         onClick={onDone}
-        className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-stone-200/60 dark:bg-stone-800/60 text-stone-500 dark:text-stone-400 hover:bg-stone-300 dark:hover:bg-stone-700 transition-colors"
+        className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center rounded-full bg-stone-200/60 dark:bg-stone-800/60 lg-ink-2 hover:bg-stone-300 dark:hover:bg-stone-700 transition-colors"
         aria-label="返回"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -78,7 +78,7 @@ export function OrderAnimation({
               </svg>
             </div>
           </div>
-          <p className="text-lg font-bold text-stone-800 dark:text-stone-200 oa2-text-fade">
+          <p className="text-lg font-bold lg-ink oa2-text-fade">
             接收訂單中...
           </p>
           <div className="flex gap-1.5 mt-3">
@@ -190,10 +190,10 @@ export function OrderAnimation({
               </g>
             </svg>
           </div>
-          <p className="text-lg font-bold text-stone-800 dark:text-stone-200 oa2-text-fade">
+          <p className="text-lg font-bold lg-ink oa2-text-fade">
             大廚料理中...
           </p>
-          <p className="text-sm text-stone-400 dark:text-stone-500 mt-1.5 oa2-text-fade" style={{ animationDelay: "0.3s" }}>美味即將完成</p>
+          <p className="text-sm lg-ink-3 mt-1.5 oa2-text-fade" style={{ animationDelay: "0.3s" }}>美味即將完成</p>
           {/* Cooking progress dots */}
           <div className="flex gap-1 mt-4">
             {[0, 1, 2, 3, 4].map(i => (
@@ -243,7 +243,7 @@ export function OrderAnimation({
             </div>
           </div>
 
-          <p className="text-2xl font-bold text-stone-900 dark:text-stone-100 oa2-pop-up">
+          <p className="text-2xl font-bold lg-ink oa2-pop-up">
             訂單完成！
           </p>
 
@@ -251,7 +251,7 @@ export function OrderAnimation({
             {orderNumbers.map((o, i) => (
               <div key={i} className="text-center">
                 {orderNumbers.length > 1 && (
-                  <span className="text-xs text-stone-400 dark:text-stone-500">
+                  <span className="text-xs lg-ink-3">
                     {o.dept === "breakfast" ? "早餐部" : "午餐部"}
                   </span>
                 )}
@@ -262,7 +262,7 @@ export function OrderAnimation({
             ))}
           </div>
 
-          <p className="text-stone-500 dark:text-stone-400 mt-2 text-sm oa2-pop-up" style={{ animationDelay: "0.25s" }}>
+          <p className="lg-ink-2 mt-2 text-sm oa2-pop-up" style={{ animationDelay: "0.25s" }}>
             請記住你的取餐號碼
           </p>
         </div>
