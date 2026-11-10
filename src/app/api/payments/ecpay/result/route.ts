@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
         paymentDate: r.paymentDate,
         merchantId: params.MerchantID,
         expectedMerchantId: cfg.merchantId,
+        mode: cfg.mode,
         source: "result",
       }).catch(() => null);
       flag = out?.ok ? "success" : "pending";

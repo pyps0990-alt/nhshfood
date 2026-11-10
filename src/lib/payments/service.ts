@@ -5,6 +5,9 @@ import { OrderError } from "@/lib/orders";
 
 export const TOP_UP_MIN = 50;
 export const TOP_UP_MAX = 5000;
+export const WALLET_CAP = 20000;
+/** Unpaid top-up attempts older than this no longer reserve headroom. */
+const PENDING_TOPUP_WINDOW_MS = 60 * 60 * 1000;
 
 export function onlinePaymentEnabled(): boolean {
   return getEcpayConfig() !== null;
@@ -48,21 +51,42 @@ export async function createTopUpPayment(studentId: string, amount: number): Pro
   if (!Number.isInteger(amount) || amount < TOP_UP_MIN || amount > TOP_UP_MAX) {
     throw new OrderError("BAD_AMOUNT", `儲值金額需介於 $${TOP_UP_MIN} ~ $${TOP_UP_MAX}`);
   }
-  const wallet = await adminDb.collection("wallets").doc(studentId).get();
-  if (wallet.exists && (wallet.data()!.balance || 0) + amount > 20000) {
-    throw new OrderError("BALANCE_CAP", "錢包餘額上限為 $20,000");
-  }
   const merchantTradeNo = newMerchantTradeNo("T");
-  const doc: PaymentDoc = {
-    merchantTradeNo,
-    purpose: "top_up",
-    studentId,
-    amount,
-    orderId: null,
-    status: "created",
-    createdAt: new Date().toISOString(),
-    mode: cfg.mode,
-  };
-  await adminDb.collection("payments").doc(merchantTradeNo).create(doc);
+  const walletRef = adminDb.collection("wallets").doc(studentId);
+  const pendingQuery = adminDb
+    .collection("payments")
+    .where("studentId", "==", studentId)
+    .where("status", "==", "created");
+  const pendingWindowStart = Date.now() - PENDING_TOPUP_WINDOW_MS;
+
+  // One transaction over the wallet AND the student's outstanding payment
+  // attempts, so concurrent top-ups can't each see the same headroom.
+  await adminDb.runTransaction(async (tx) => {
+    const [wallet, pending] = await Promise.all([tx.get(walletRef), tx.get(pendingQuery)]);
+    const balance = wallet.exists ? wallet.data()!.balance || 0 : 0;
+    const outstanding = pending.docs
+      .map((d) => d.data() as PaymentDoc)
+      .filter((p) => p.purpose === "top_up" && Date.parse(p.createdAt) >= pendingWindowStart)
+      .reduce((sum, p) => sum + p.amount, 0);
+    if (balance + outstanding + amount > WALLET_CAP) {
+      throw new OrderError(
+        "BALANCE_CAP",
+        outstanding > 0
+          ? `錢包上限為 $${WALLET_CAP.toLocaleString()}，你還有 $${outstanding} 的儲值尚未完成付款`
+          : `錢包餘額上限為 $${WALLET_CAP.toLocaleString()}`
+      );
+    }
+    const doc: PaymentDoc = {
+      merchantTradeNo,
+      purpose: "top_up",
+      studentId,
+      amount,
+      orderId: null,
+      status: "created",
+      createdAt: new Date().toISOString(),
+      mode: cfg.mode,
+    };
+    tx.create(adminDb.collection("payments").doc(merchantTradeNo), doc);
+  });
   return merchantTradeNo;
 }

@@ -48,6 +48,7 @@ export async function POST(req: NextRequest) {
       paymentDate: q.paymentDate,
       merchantId: cfg.merchantId,
       expectedMerchantId: cfg.merchantId,
+        mode: cfg.mode,
       source: "query",
     });
     if (r.outcome === "order_paid" && r.orderId) notifyOrderPaid(r.orderId).catch(() => {});

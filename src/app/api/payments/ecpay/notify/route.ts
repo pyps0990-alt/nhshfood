@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     paymentDate: r.paymentDate,
     merchantId: params.MerchantID,
     expectedMerchantId: cfg.merchantId,
+        mode: cfg.mode,
     source: "notify",
   }).catch((e) => {
     console.error("applyPaymentSuccess error", e);

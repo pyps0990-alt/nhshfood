@@ -45,21 +45,42 @@ export interface EcpayConfig {
   hashIv: string;
 }
 
-/** Returns null when online payment must not be offered. */
+/**
+ * Returns null when online payment must not be offered.
+ *
+ * Stage mode uses ECPay's PUBLIC test HashKey/IV, so its CheckMacValue proves
+ * nothing — anyone can sign a "paid" callback. Stage must therefore never run
+ * against real data:
+ *   - local dev (not on Vercel): stage by default (you run your own Firestore)
+ *   - on Vercel: stage only when ECPAY_MODE=stage AND ECPAY_STAGE_ISOLATED_DB=1,
+ *     i.e. the operator asserts this deployment uses a separate Firebase project.
+ *     Preview deployments share production Firestore by default, so without
+ *     that assertion online payment is simply off there.
+ */
 export function getEcpayConfig(): EcpayConfig | null {
   const explicit = process.env.ECPAY_MODE;
+  const onVercel = !!process.env.VERCEL;
   const isVercelProd = process.env.VERCEL_ENV === "production";
-  const mode: EcpayMode = explicit === "production" ? "production" : explicit === "stage" ? "stage" : isVercelProd ? "production" : "stage";
+  const mode: EcpayMode =
+    explicit === "production" ? "production" : explicit === "stage" ? "stage" : onVercel ? "production" : "stage";
+
+  if (mode === "stage") {
+    if (isVercelProd) return null; // never test-mode on the live site
+    if (onVercel && process.env.ECPAY_STAGE_ISOLATED_DB !== "1") return null;
+    return {
+      mode,
+      merchantId: process.env.ECPAY_MERCHANT_ID || STAGE_DEFAULTS.merchantId,
+      hashKey: process.env.ECPAY_HASH_KEY || STAGE_DEFAULTS.hashKey,
+      hashIv: process.env.ECPAY_HASH_IV || STAGE_DEFAULTS.hashIv,
+    };
+  }
 
   const merchantId = process.env.ECPAY_MERCHANT_ID;
   const hashKey = process.env.ECPAY_HASH_KEY;
   const hashIv = process.env.ECPAY_HASH_IV;
-
-  if (merchantId && hashKey && hashIv) {
-    return { mode, merchantId, hashKey, hashIv };
-  }
-  if (mode === "stage") return { mode, ...STAGE_DEFAULTS };
-  return null; // production without credentials → disabled
+  if (!merchantId || !hashKey || !hashIv) return null; // production without credentials → disabled
+  if (merchantId === STAGE_DEFAULTS.merchantId || hashKey === STAGE_DEFAULTS.hashKey) return null; // public test keys can't be production
+  return { mode, merchantId, hashKey, hashIv };
 }
 
 export function ecpayHost(cfg: EcpayConfig) {

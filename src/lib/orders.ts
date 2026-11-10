@@ -380,6 +380,8 @@ export async function applyPaymentSuccess(p: {
   paymentDate: string;
   merchantId: string;
   expectedMerchantId: string;
+  /** Mode of the config that verified this callback. */
+  mode: "stage" | "production";
   source: "notify" | "result" | "query";
 }): Promise<{ ok: boolean; outcome: string; orderId?: string | null; purpose?: string }> {
   if (p.merchantId !== p.expectedMerchantId) return { ok: false, outcome: "merchant_mismatch" };
@@ -390,6 +392,12 @@ export async function applyPaymentSuccess(p: {
     if (!paySnap.exists) return { ok: false, outcome: "unknown_trade" };
     const pay = paySnap.data() as PaymentDoc;
 
+    // A payment created under one mode can only be settled by a callback
+    // verified under the same mode (stage keys are public).
+    if (pay.mode !== p.mode) {
+      tx.update(payRef, { lastError: `mode mismatch: ${p.mode}`, lastErrorAt: new Date().toISOString() });
+      return { ok: false, outcome: "mode_mismatch" };
+    }
     if (pay.amount !== p.amount) {
       tx.update(payRef, { lastError: `amount mismatch: got ${p.amount}`, lastErrorAt: new Date().toISOString() });
       return { ok: false, outcome: "amount_mismatch" };
