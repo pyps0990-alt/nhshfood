@@ -5,6 +5,11 @@ import { useSettings } from "./settings";
 
 export function useThemeEffect() {
   const theme = useSettings((s) => s.theme);
+  const glass = useSettings((s) => s.glass);
+
+  useEffect(() => {
+    document.documentElement.dataset.glass = glass || "regular";
+  }, [glass]);
 
   useEffect(() => {
     const root = document.documentElement;

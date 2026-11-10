@@ -228,7 +228,7 @@ export default function AnalyticsPage() {
       {error && (
         <div className="px-5 py-8 text-center">
           <p className="text-red-500 font-medium">{error}</p>
-          <button onClick={fetchData} className="mt-3 text-sm text-[#E23D28] font-semibold">重試</button>
+          <button onClick={fetchData} className="mt-3 text-sm text-[var(--tint)] font-semibold">重試</button>
         </div>
       )}
 
@@ -273,7 +273,7 @@ export default function AnalyticsPage() {
               <div className="grid grid-cols-2 gap-3">
                 {Object.entries(data.deptSplit).map(([d, v]) => (
                   <div key={d} className={`rounded-[22px] p-4 border ${d === "breakfast" ? "bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900" : "bg-orange-50 dark:bg-orange-950/20 border-orange-100 dark:border-orange-900"}`}>
-                    <p className={`text-sm font-bold ${d === "breakfast" ? "text-[#E23D28]" : "text-[#FF6B35]"}`}>
+                    <p className={`text-sm font-bold ${d === "breakfast" ? "text-[var(--tint)]" : "text-[#FF6B35]"}`}>
                       {d === "breakfast" ? "早餐部" : "午餐部"}
                     </p>
                     <p className="text-xl font-black lg-ink mt-1">${v.revenue.toLocaleString()}</p>
@@ -470,7 +470,7 @@ function HourlyChart({ data }: { data: number[] }) {
     <div>
       {peakHour.count > 0 && (
         <p className="text-xs lg-ink-2 mb-3">
-          尖峰時段：<span className="font-bold text-[#E23D28]">{peakHour.hour}:00</span>（{peakHour.count} 筆）
+          尖峰時段：<span className="font-bold text-[var(--tint)]">{peakHour.hour}:00</span>（{peakHour.count} 筆）
         </p>
       )}
       <div className="flex items-end gap-[3px] h-28">
@@ -516,17 +516,17 @@ function PrepTimeSection({ stats }: { stats: AnalyticsData["prepTimeStats"] }) {
 
       {/* Three phase cards */}
       <div className="grid grid-cols-3 gap-2">
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900 rounded-xl p-3 text-center">
+        <div className="ios-card rounded-xl p-3 text-center">
           <p className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mb-1">接單</p>
           <p className="text-lg font-black text-amber-700 dark:text-amber-300">{fmt(stats.confirmTime.median)}</p>
           <p className="text-[10px] text-stone-400 mt-0.5">中位數</p>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded-xl p-3 text-center">
+        <div className="ios-card rounded-xl p-3 text-center">
           <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mb-1">備餐</p>
           <p className="text-lg font-black text-blue-700 dark:text-blue-300">{fmt(stats.cookTime.median)}</p>
           <p className="text-[10px] text-stone-400 mt-0.5">中位數</p>
         </div>
-        <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 rounded-xl p-3 text-center">
+        <div className="ios-card rounded-xl p-3 text-center">
           <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium mb-1">總準備</p>
           <p className="text-lg font-black text-emerald-700 dark:text-emerald-300">{fmt(stats.totalPrepTime.median)}</p>
           <p className="text-[10px] text-stone-400 mt-0.5">中位數</p>

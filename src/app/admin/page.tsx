@@ -160,11 +160,11 @@ export default function AdminPage() {
       </div>
 
       <div className="px-5 py-4 flex gap-3">
-        <div className="flex-1 bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-800 rounded-xl px-4 py-3">
+        <div className="flex-1 ios-card rounded-xl px-4 py-3">
           <p className="text-label text-blue-500 dark:text-blue-400">今日訂單</p>
           <p className="text-value text-2xl text-blue-700 dark:text-blue-300 mt-0.5">{todayOrders.length}</p>
         </div>
-        <div className="flex-1 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800 rounded-xl px-4 py-3">
+        <div className="flex-1 ios-card rounded-xl px-4 py-3">
           <p className="text-label text-emerald-500 dark:text-emerald-400">營業額</p>
           <p className="text-value text-2xl text-emerald-700 dark:text-emerald-300 mt-0.5">${todayRevenue}</p>
         </div>
@@ -173,7 +173,7 @@ export default function AdminPage() {
       <div className="flex gap-2 px-5 py-2 overflow-x-auto scrollbar-none">
         {["all", ...statusFlow, "cancelled"].map((s) => (
           <button key={s} onClick={() => setFilterStatus(s)}
-            className={`flex items-center gap-1 px-4 py-1.5 rounded-xl text-xs whitespace-nowrap font-medium transition-all border-2 ${filterStatus === s ? "border-[#E23D28] bg-red-50 dark:bg-red-950/30 text-[#E23D28]" : "border-transparent lg-thin lg-ink-2 hover:bg-black/10 dark:hover:bg-white/10"}`}>
+            aria-pressed={filterStatus === s} className="lg-chip shrink-0">
             {filterStatus === s && (
               <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             )}

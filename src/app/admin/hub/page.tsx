@@ -118,8 +118,7 @@ export default function AdminHubPage() {
       </header>
 
       <main className="flex-1 px-5 py-6 max-w-2xl mx-auto w-full">
-        <h2 className="lg-large-title lg-ink">管理總覽</h2>
-        <p className="text-[15px] lg-ink-2 mt-1 mb-6">選擇要前往的管理功能</p>
+        <p className="ios-subhead lg-ink-2 mb-5">選擇要前往的管理功能</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {links.map((l) => (
             <Link

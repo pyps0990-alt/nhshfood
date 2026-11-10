@@ -39,14 +39,14 @@ export function NavBar({ title, subtitle, backHref, onBack, right, variant = "cl
         data-scrolled={scrolled || smoke ? "true" : "false"}
         className={`lg-nav ${smoke ? "lg-smoke" : ""} ${className}`}
       >
-        <div className="max-w-5xl mx-auto h-[52px] px-3 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+        <div className="max-w-5xl mx-auto h-[56px] px-4 grid grid-cols-[1fr_auto_1fr] items-center gap-2">
           <div className="flex items-center min-w-0">
             {(backHref || onBack) && <BackButton href={backHref} onClick={onBack} smoke={smoke} />}
           </div>
           <div
             className={`text-center min-w-0 transition-all duration-300 ${showInlineTitle ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"}`}
           >
-            <div className={`text-[17px] font-semibold truncate ${smoke ? "text-white" : "lg-ink"}`}>{title}</div>
+            <div className={`ios-headline truncate ${smoke ? "text-white" : "lg-ink"}`}>{title}</div>
             {subtitle && !large && (
               <div className={`text-[11px] font-medium truncate ${smoke ? "text-white/60" : "lg-ink-3"}`}>{subtitle}</div>
             )}
@@ -55,9 +55,9 @@ export function NavBar({ title, subtitle, backHref, onBack, right, variant = "cl
         </div>
       </header>
       {large && (
-        <div className="max-w-5xl mx-auto w-full px-5 pt-1 pb-2">
-          <h1 className={`lg-large-title ${smoke ? "text-white" : "lg-ink"}`}>{title}</h1>
-          {subtitle && <p className={`mt-1 text-[15px] font-medium ${smoke ? "text-white/60" : "lg-ink-2"}`}>{subtitle}</p>}
+        <div className="max-w-5xl mx-auto w-full px-5 pt-1 pb-3">
+          <h1 className={`ios-large-title ${smoke ? "text-white" : "lg-ink"}`}>{title}</h1>
+          {subtitle && <p className={`mt-0.5 ios-subhead ${smoke ? "text-white/60" : "lg-ink-2"}`}>{subtitle}</p>}
         </div>
       )}
     </>
@@ -65,7 +65,7 @@ export function NavBar({ title, subtitle, backHref, onBack, right, variant = "cl
 }
 
 export function BackButton({ href, onClick, smoke = false }: { href?: string; onClick?: () => void; smoke?: boolean }) {
-  const cls = `lg-btn lg-btn-icon ${smoke ? "bg-white/10 text-white" : "lg-thin lg-ink"} !min-h-[38px] !w-[38px]`;
+  const cls = `lg-btn lg-btn-icon ${smoke ? "bg-white/10 text-white" : "lg-glass lg-ink"} !min-h-[44px] !w-[44px]`;
   const icon = (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M15 18l-6-6 6-6" />
@@ -76,7 +76,12 @@ export function BackButton({ href, onClick, smoke = false }: { href?: string; on
 }
 
 export function IconButton({ href, onClick, label, children, smoke = false }: { href?: string; onClick?: () => void; label: string; children: ReactNode; smoke?: boolean }) {
-  const cls = `lg-btn lg-btn-icon ${smoke ? "bg-white/10 text-white" : "lg-thin lg-ink-2"} !min-h-[38px] !w-[38px]`;
+  const cls = `lg-btn lg-btn-icon ${smoke ? "bg-white/10 text-white" : "lg-glass lg-ink"} !min-h-[44px] !w-[44px]`;
   if (href) return <Link href={href} aria-label={label} className={cls}>{children}</Link>;
   return <button type="button" onClick={onClick} aria-label={label} className={cls}>{children}</button>;
+}
+
+/** Several related bar buttons sharing one glass capsule (HIG toolbar grouping). */
+export function NavGroup({ children }: { children: ReactNode }) {
+  return <div className="lg-glass lg-glass-group">{children}</div>;
 }

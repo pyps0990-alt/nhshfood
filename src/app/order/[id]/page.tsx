@@ -294,7 +294,7 @@ export default function OrderStatusPage() {
       </div>
       <h2 className="text-lg font-bold text-stone-800 dark:text-stone-200 mb-1">找不到訂單</h2>
       <p className="text-sm text-stone-400 dark:text-stone-500 text-center mb-6">請確認訂單編號是否正確，或回首頁重新查詢</p>
-      <Link href="/" className="text-[#E23D28] font-semibold text-sm hover:underline">回到首頁</Link>
+      <Link href="/" className="text-[var(--tint)] font-semibold text-sm hover:underline">回到首頁</Link>
     </div>
   );
 
@@ -422,7 +422,7 @@ export default function OrderStatusPage() {
                         )}
                       </div>
                       <span className={`text-[11px] mt-1.5 whitespace-nowrap font-medium transition-colors duration-500 ${
-                        isCurrent ? (i === 3 ? "text-emerald-600 dark:text-emerald-400" : "text-[#E23D28]") + " font-bold" : isActive ? "text-emerald-500 dark:text-emerald-400" : "lg-ink-3"
+                        isCurrent ? (i === 3 ? "text-emerald-600 dark:text-emerald-400" : "text-[var(--tint)]") + " font-bold" : isActive ? "text-emerald-500 dark:text-emerald-400" : "lg-ink-3"
                       }`}>
                         {stepLabels[i]}
                       </span>

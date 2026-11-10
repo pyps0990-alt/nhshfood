@@ -48,7 +48,7 @@ export function MenuCard({
   }, [updateQty, item.id, qty]);
 
   return (
-    <div className={`lg-card lg-hover overflow-hidden flex flex-col relative ${isSoldOut ? "opacity-70" : ""}`}>
+    <div className={`ios-card overflow-hidden flex flex-col relative ${isSoldOut ? "opacity-60" : ""}`}>
       {item.imageUrl ? (
         <div className="relative aspect-[4/3] m-1.5 mb-0 rounded-[20px] overflow-hidden bg-black/5 dark:bg-white/5">
           <img
@@ -69,7 +69,7 @@ export function MenuCard({
           )}
           {isSoldOut && (
             <div className="absolute inset-0 grid place-items-center bg-black/25">
-              <span className="lg-smoke text-xs font-bold px-3 py-1 rounded-full">{t("sold_out")}</span>
+              <span className="lg-glass-clear ios-footnote font-semibold px-3 py-1 rounded-full">{t("sold_out")}</span>
             </div>
           )}
         </div>
@@ -87,14 +87,14 @@ export function MenuCard({
 
       {justAdded && (
         <div className="absolute top-3 right-3 z-10 pointer-events-none">
-          <span className="animate-added-fly inline-block lg-tinted text-xs font-bold px-2 py-1 rounded-full">+1</span>
+          <span className="animate-added-fly inline-block lg-tinted ios-footnote font-bold px-2 py-0.5 rounded-full">+1</span>
         </div>
       )}
 
       <div className={`px-3.5 pt-3 pb-3.5 flex flex-col flex-1 ${!item.imageUrl && tags.length > 0 ? "pt-1.5" : ""}`}>
-        <h3 className="font-semibold text-[15px] leading-snug lg-ink line-clamp-2">{tMenu(item.name)}</h3>
+        <h3 className="ios-headline lg-ink line-clamp-2">{tMenu(item.name)}</h3>
         {item.description && (
-          <p className="text-[12px] lg-ink-3 mt-1 line-clamp-2 leading-snug">{tMenu(item.description)}</p>
+          <p className="ios-footnote lg-ink-2 mt-0.5 line-clamp-2">{tMenu(item.description)}</p>
         )}
 
         <div className="mt-auto pt-3 flex items-end justify-between gap-2">
@@ -110,12 +110,12 @@ export function MenuCard({
           </div>
 
           {isSoldOut ? (
-            <span className="lg-btn lg-btn-sm lg-thin lg-ink-3 shrink-0">{t("sold_out")}</span>
+            <span className="lg-btn lg-btn-sm lg-thin lg-ink-2 shrink-0">{t("sold_out")}</span>
           ) : qty === 0 ? (
             <button
               onClick={handleAdd}
               aria-label={`${t("add")} ${tMenu(item.name)}`}
-              className="lg-btn lg-btn-icon lg-tinted shrink-0 !w-9 !min-h-9"
+              className="lg-btn lg-btn-icon lg-tinted shrink-0 !w-10 !min-h-10"
               data-dept={department}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>

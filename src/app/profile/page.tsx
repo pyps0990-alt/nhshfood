@@ -215,7 +215,7 @@ export default function ProfilePage() {
             <div className="flex items-center justify-between">
               <h2 className="font-bold lg-ink">變更密碼</h2>
               <button type="button" onClick={() => setChangingPassword(!changingPassword)}
-                className="text-sm text-[#E23D28] font-medium">
+                className="text-sm text-[var(--tint)] font-medium">
                 {changingPassword ? "取消" : "修改密碼"}
               </button>
             </div>

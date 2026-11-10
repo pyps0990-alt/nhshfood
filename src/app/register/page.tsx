@@ -144,7 +144,7 @@ export default function RegisterPage() {
             onClick={() => setRole("student")}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
               role === "student"
-                ? "bg-white dark:bg-stone-700 text-[#E23D28] shadow-sm"
+                ? "bg-white dark:bg-stone-700 text-[var(--tint)] shadow-sm"
                 : "lg-ink-2 hover:text-stone-700 dark:hover:text-stone-300"
             }`}
           >
@@ -155,7 +155,7 @@ export default function RegisterPage() {
             onClick={() => setRole("teacher")}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
               role === "teacher"
-                ? "bg-white dark:bg-stone-700 text-[#E23D28] shadow-sm"
+                ? "bg-white dark:bg-stone-700 text-[var(--tint)] shadow-sm"
                 : "lg-ink-2 hover:text-stone-700 dark:hover:text-stone-300"
             }`}
           >
@@ -336,7 +336,7 @@ export default function RegisterPage() {
         <div className="mt-6 text-center">
           <p className="text-sm lg-ink-2">
             已有帳號？
-            <Link href="/login" className="text-[#E23D28] font-semibold ml-1 hover:underline">
+            <Link href="/login" className="text-[var(--tint)] font-semibold ml-1 hover:underline">
               登入
             </Link>
           </p>

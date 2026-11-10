@@ -40,6 +40,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           try{const s=JSON.parse(localStorage.getItem('nhsh-settings')||'{}');
           const t=s.state?.theme||'system';
+          document.documentElement.dataset.glass=s.state?.glass||'regular';
           if(t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme:dark)').matches))
           document.documentElement.classList.add('dark')}catch{}
         `}} />

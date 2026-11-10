@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { MenuCard } from "@/components/MenuCard";
-import { CartBar } from "@/components/CartBar";
+import { MenuToolbar } from "@/components/MenuToolbar";
 import { DepartmentCartSheet } from "@/components/DepartmentCartSheet";
 import { MenuLoader } from "@/components/MenuLoader";
 import { NavBar } from "@/components/glass/NavBar";
@@ -59,8 +59,8 @@ export function DepartmentMenuPage({ department }: { department: Dept }) {
 
       {!open && (
         <div className="px-4 pt-1">
-          <div className="lg-card px-4 py-3.5 flex items-start gap-3 lg-rise">
-            <span className="mt-0.5 w-8 h-8 rounded-full grid place-items-center bg-amber-500/15 text-amber-600 shrink-0">
+          <div className="ios-card px-4 py-3.5 flex items-start gap-3 lg-rise">
+            <span className="mt-0.5 w-8 h-8 rounded-full grid place-items-center shrink-0" style={{ background: "rgba(255,149,0,.15)", color: "var(--sys-orange)" }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
             </span>
             <div>
@@ -71,40 +71,19 @@ export function DepartmentMenuPage({ department }: { department: Dept }) {
         </div>
       )}
 
-      {/* Search + categories */}
-      <div className="relative z-10 px-4 pt-2 pb-2 max-w-5xl mx-auto w-full">
-        <div className="relative">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" className="absolute left-3.5 top-1/2 -translate-y-1/2 lg-ink-3 pointer-events-none" aria-hidden="true">
-            <circle cx="11" cy="11" r="7.5" /><path d="M21 21l-4.3-4.3" />
-          </svg>
-          <input
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("search_menu")}
-            aria-label={t("search_menu")}
-            className="lg-field lg-pill !pl-10 !pr-10 !min-h-[42px] text-[15px]"
-          />
-          {search && (
-            <button
-              onClick={() => setSearch("")}
-              aria-label="清除搜尋"
-              className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 grid place-items-center rounded-full bg-black/10 dark:bg-white/15 lg-ink-2"
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12" /></svg>
-            </button>
-          )}
-        </div>
-        <div className="flex gap-2 pt-2.5 overflow-x-auto scrollbar-none -mx-4 px-4">
-          {categories.map((c) => (
-            <button key={c} type="button" onClick={() => setCategory(c)} aria-pressed={category === c} className="lg-chip">
-              {c === "all" ? t("all") : tMenu(c)}
-            </button>
-          ))}
-        </div>
+      {/* Category chips */}
+      <div className="flex gap-2 px-4 pt-1 pb-3 overflow-x-auto scrollbar-none max-w-5xl mx-auto w-full" role="toolbar" aria-label="分類">
+        {categories.map((c) => (
+          <button key={c} type="button" onClick={() => setCategory(c)} aria-pressed={category === c} className="lg-chip shrink-0">
+            {c === "all" ? t("all") : tMenu(c)}
+          </button>
+        ))}
       </div>
+      {search && (
+        <p className="px-5 pb-2 ios-footnote lg-ink-2 max-w-5xl mx-auto w-full">「{search}」的搜尋結果：{filtered.length} 項</p>
+      )}
 
-      <main className="flex-1 px-4 pt-2 pb-32 max-w-5xl mx-auto w-full">
+      <main className="flex-1 px-4 pb-32 max-w-5xl mx-auto w-full">
         {error ? (
           <EmptyState
             tone={COLOR[department]}
@@ -129,7 +108,7 @@ export function DepartmentMenuPage({ department }: { department: Dept }) {
         )}
       </main>
 
-      <CartBar department={department} onOpen={() => setShowCart(true)} />
+      <MenuToolbar department={department} onOpenCart={() => setShowCart(true)} search={search} onSearch={setSearch} />
       <DepartmentCartSheet open={showCart} department={department} onClose={() => setShowCart(false)} />
     </div>
   );
@@ -138,7 +117,7 @@ export function DepartmentMenuPage({ department }: { department: Dept }) {
 function EmptyState({ tone, title, body, action }: { tone: string; title: string; body: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 px-6 lg-rise">
-      <div className="lg-card w-16 h-16 !rounded-[22px] grid place-items-center mb-4" style={{ color: tone }}>
+      <div className="w-16 h-16 rounded-[18px] grid place-items-center mb-4 bg-[var(--fill-3)]" style={{ color: tone }}>
         <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2" /><path d="M7 2v20" /><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" />
         </svg>

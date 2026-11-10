@@ -6,6 +6,7 @@ import { useStudentAuth, useStudentAuthHydrated } from "@/lib/student-auth";
 import { useT } from "@/lib/i18n";
 import { Segmented } from "@/components/glass/Segmented";
 import { NavBar, IconButton } from "@/components/glass/NavBar";
+import { TabBar } from "@/components/glass/TabBar";
 import { usePaymentStatus } from "@/components/glass/PaymentMethodPicker";
 import { MemberBarcode } from "@/components/MemberBarcode";
 import { IconWallet, IconEye, IconEyeOff, IconArrowUp, IconArrowDown, IconBarcode, IconInbox, IconChevronRight } from "@/components/Icons";
@@ -169,7 +170,7 @@ function WalletPageInner() {
   if (!student || loading) {
     return (
       <div className="flex-1 flex flex-col">
-        <NavBar backHref="/" title={t("wallet")} />
+        <NavBar title={t("wallet")} />
         <main className="flex-1 px-4 py-4 max-w-lg mx-auto w-full space-y-3 animate-pulse">
           {/* Balance card skeleton */}
           <div className="rounded-[28px] lg-tinted opacity-70 p-5">
@@ -202,10 +203,9 @@ function WalletPageInner() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col has-tabbar">
       <NavBar
         large
-        backHref="/"
         title={t("wallet")}
         right={
           <IconButton label="會員條碼" onClick={() => setShowBarcode(!showBarcode)}>
@@ -394,6 +394,8 @@ function WalletPageInner() {
 
         <div className="h-4" />
       </main>
+
+      <TabBar />
 
       {/* === Transaction Detail Modal === */}
       {selectedTx && (

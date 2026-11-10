@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useSettings, type Theme, type Locale, type NotifyMethod } from "@/lib/settings";
 import { useT } from "@/lib/i18n";
 import { useStudentAuth } from "@/lib/student-auth";
-import { BackButton } from "@/components/BackButton";
+import { NavBar } from "@/components/glass/NavBar";
+import { TabBar } from "@/components/glass/TabBar";
 import { MemberBarcode } from "@/components/MemberBarcode";
 import {
   IconSun, IconMoon, IconMonitor, IconGlobe, IconUser,
@@ -26,7 +27,7 @@ const localeOptions: { value: Locale; label: string; sub: string }[] = [
 ];
 
 export default function SettingsPage() {
-  const { theme, locale, notifyMethod, setTheme, setLocale, setNotifyMethod } = useSettings();
+  const { theme, locale, notifyMethod, setTheme, setLocale, setNotifyMethod, glass, setGlass } = useSettings();
   const { student, logout, setStudent } = useStudentAuth();
   const t = useT();
   const [pushError, setPushError] = useState("");
@@ -111,13 +112,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <header data-solid="true" className="lg-nav px-5 py-4 flex items-center gap-3">
-        <BackButton href="/" />
-        <h1 className="text-lg font-bold lg-ink">{t("settings")}</h1>
-      </header>
+    <div className="flex-1 flex flex-col has-tabbar">
+      <NavBar large title={t("settings")} />
 
-      <main className="flex-1 px-5 py-6 max-w-lg mx-auto w-full space-y-5 stagger-children">
+      <main className="flex-1 px-4 pb-6 max-w-lg mx-auto w-full space-y-5">
         {/* Member Card */}
         {student && (
           <div className="card-premium overflow-hidden">
@@ -141,7 +139,7 @@ export default function SettingsPage() {
               {showBarcode && (
                 <div className="bg-white rounded-lg p-3 mt-4 animate-fade-in">
                   <MemberBarcode value={student.studentId} height={48} className="text-stone-900" />
-                  <p className="text-center text-stone-500 text-xs font-mono mt-1.5 tracking-widest">{student.studentId}</p>
+                  <p className="text-center lg-ink-2 text-xs font-mono mt-1.5 tracking-widest">{student.studentId}</p>
                 </div>
               )}
             </div>
@@ -168,7 +166,7 @@ export default function SettingsPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => { setShowNickInput(false); setNickname(student?.displayName || ""); setNickError(""); }}
-                      className="flex-1 py-2 rounded-xl border border-white/60 dark:border-white/10 text-sm text-stone-500 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                      className="flex-1 py-2 rounded-xl border border-white/60 dark:border-white/10 text-sm lg-ink-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
                     >取消</button>
                     <button
                       onClick={saveNickname}
@@ -182,7 +180,7 @@ export default function SettingsPage() {
                   onClick={() => setShowNickInput(true)}
                   className="flex items-center gap-2 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:bg-stone-100 dark:active:bg-stone-700 transition-colors w-full text-left"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500 shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-2 shrink-0">
                     <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                   </svg>
                   <div className="min-w-0 flex-1">
@@ -193,7 +191,7 @@ export default function SettingsPage() {
                 </button>
               )}
               <Link href="/profile" className="flex items-center gap-2 p-3 rounded-xl hover:bg-black/5 dark:hover:bg-white/5 active:bg-stone-100 dark:active:bg-stone-700 transition-colors">
-                <IconUser size={16} className="text-stone-500" />
+                <IconUser size={16} className="lg-ink-2" />
                 <span className="text-sm font-medium lg-ink truncate">{t("profile")}</span>
                 <IconChevronRight size={14} className="text-stone-300 ml-auto shrink-0" />
               </Link>
@@ -223,7 +221,7 @@ export default function SettingsPage() {
         {/* Theme */}
         <div className="card-premium p-5">
           <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
-            <IconSun size={16} className="text-stone-500" />
+            <IconSun size={16} className="lg-ink-2" />
             {t("dark_mode")}
           </h2>
           <div className="grid grid-cols-3 gap-2">
@@ -233,14 +231,14 @@ export default function SettingsPage() {
                 <button
                   key={opt.value}
                   onClick={() => setTheme(opt.value)}
-                  className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+                  className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 ${
                     theme === opt.value
-                      ? "border-[#E23D28] bg-red-50 dark:bg-red-950/30"
-                      : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600"
+                      ? "bg-[var(--fill-3)] ring-2 ring-[var(--tint)]"
+                      : "bg-[var(--fill-4)]"
                   }`}
                 >
-                  <Icon size={22} className={theme === opt.value ? "text-[#E23D28]" : "lg-ink-2"} />
-                  <span className={`text-xs font-medium ${theme === opt.value ? "text-[#E23D28]" : "lg-ink-2"}`}>
+                  <Icon size={22} className={theme === opt.value ? "text-[var(--tint)]" : "lg-ink-2"} />
+                  <span className={`text-xs font-medium ${theme === opt.value ? "text-[var(--tint)]" : "lg-ink-2"}`}>
                     {t(opt.label)}
                   </span>
                 </button>
@@ -249,10 +247,38 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Liquid Glass intensity (iOS 27-style) */}
+        <div className="card-premium p-5">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-bold lg-ink">玻璃效果</h2>
+            <span className="ios-footnote lg-ink-2">{({ clear: "透明", regular: "標準", tinted: "著色", off: "關閉" } as const)[glass || "regular"]}</span>
+          </div>
+          <p className="ios-footnote lg-ink-2 mb-4">調整導覽列、工具列與面板的透明度。著色可提高文字對比。</p>
+          <div className="flex items-center gap-3">
+            <span className="ios-footnote lg-ink-2 shrink-0">透明</span>
+            <input
+              type="range" min={0} max={2} step={1}
+              aria-label="玻璃效果強度"
+              disabled={glass === "off"}
+              value={glass === "clear" ? 0 : glass === "tinted" ? 2 : 1}
+              onChange={(e) => setGlass((["clear", "regular", "tinted"] as const)[Number(e.target.value)])}
+              className="ios-slider flex-1"
+            />
+            <span className="ios-footnote lg-ink-2 shrink-0">著色</span>
+          </div>
+          <div className="mt-4 lg-glass rounded-[18px] h-14 grid place-items-center relative overflow-hidden" aria-hidden="true">
+            <span className="ios-subhead font-semibold lg-ink">預覽</span>
+          </div>
+          <label className="mt-4 flex items-center justify-between gap-3">
+            <span className="ios-body lg-ink">關閉透明效果</span>
+            <input type="checkbox" role="switch" className="ios-switch" checked={glass === "off"} onChange={(e) => setGlass(e.target.checked ? "off" : "regular")} />
+          </label>
+        </div>
+
         {/* Language */}
         <div className="card-premium p-5">
           <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
-            <IconGlobe size={16} className="text-stone-500" />
+            <IconGlobe size={16} className="lg-ink-2" />
             {t("language")}
           </h2>
           <div className="grid grid-cols-2 gap-2">
@@ -260,13 +286,13 @@ export default function SettingsPage() {
               <button
                 key={opt.value}
                 onClick={() => setLocale(opt.value)}
-                className={`flex flex-col items-start p-4 rounded-xl border-2 transition-all duration-200 ${
+                className={`flex flex-col items-start p-4 rounded-xl transition-all duration-200 ${
                   locale === opt.value
-                    ? "border-[#E23D28] bg-red-50 dark:bg-red-950/30"
-                    : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600"
+                    ? "bg-[var(--fill-3)] ring-2 ring-[var(--tint)]"
+                    : "bg-[var(--fill-4)]"
                 }`}
               >
-                <span className={`text-sm font-semibold ${locale === opt.value ? "text-[#E23D28]" : "lg-ink"}`}>
+                <span className={`text-sm font-semibold ${locale === opt.value ? "text-[var(--tint)]" : "lg-ink"}`}>
                   {opt.label}
                 </span>
                 <span className="text-[11px] text-stone-400 mt-0.5">{opt.sub}</span>
@@ -278,7 +304,7 @@ export default function SettingsPage() {
         {/* Notifications */}
         <div className="card-premium p-5">
           <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-2">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
             {t("notifications") || "通知方式"}
@@ -304,16 +330,16 @@ export default function SettingsPage() {
               <button
                 key={opt.value}
                 onClick={() => handleNotifyChange(opt.value)}
-                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+                className={`flex flex-col items-center gap-2 p-4 rounded-xl transition-all duration-200 ${
                   notifyMethod === opt.value
-                    ? "border-[#E23D28] bg-red-50 dark:bg-red-950/30"
-                    : "border-stone-200 dark:border-stone-700 hover:border-stone-300 dark:hover:border-stone-600"
+                    ? "bg-[var(--fill-3)] ring-2 ring-[var(--tint)]"
+                    : "bg-[var(--fill-4)]"
                 }`}
               >
-                <span className={notifyMethod === opt.value ? "text-[#E23D28]" : "lg-ink-2"}>
+                <span className={notifyMethod === opt.value ? "text-[var(--tint)]" : "lg-ink-2"}>
                   {opt.icon}
                 </span>
-                <span className={`text-xs font-medium ${notifyMethod === opt.value ? "text-[#E23D28]" : "lg-ink-2"}`}>
+                <span className={`text-xs font-medium ${notifyMethod === opt.value ? "text-[var(--tint)]" : "lg-ink-2"}`}>
                   {opt.label}
                 </span>
               </button>
@@ -341,7 +367,7 @@ export default function SettingsPage() {
         {student && notifyMethod !== "none" && (
           <div className="card-premium p-5">
             <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-2">
                 <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
               </svg>
               測試通知
@@ -362,7 +388,7 @@ export default function SettingsPage() {
                   } catch { alert("網路錯誤"); }
                 }
               }}
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-[#E23D28] dark:hover:border-[#E23D28] lg-ink hover:text-[#E23D28] text-sm font-medium transition-all"
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 hover:border-[#E23D28] dark:hover:border-[#E23D28] lg-ink hover:text-[var(--tint)] text-sm font-medium transition-all"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
@@ -375,7 +401,7 @@ export default function SettingsPage() {
         {/* Location */}
         <div className="card-premium p-5">
           <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-2">
               <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0116 0z"/><circle cx="12" cy="10" r="3"/>
             </svg>
             定位設定
@@ -399,7 +425,7 @@ export default function SettingsPage() {
                   else alert("無法取得定位");
                 }
               }}
-              className="px-4 py-2 rounded-xl border-2 border-stone-200 dark:border-stone-700 text-sm font-medium lg-ink hover:border-[#E23D28] hover:text-[#E23D28] transition-all"
+              className="px-4 py-2 rounded-xl border-2 border-stone-200 dark:border-stone-700 text-sm font-medium lg-ink hover:border-[#E23D28] hover:text-[var(--tint)] transition-all"
             >
               檢查權限
             </button>
@@ -409,7 +435,7 @@ export default function SettingsPage() {
         {/* Admin Contact */}
         <div className="card-premium p-5">
           <h2 className="font-bold lg-ink mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-2">
               <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/>
             </svg>
             {t("contact_admin") || "聯繫管理員"}
@@ -488,6 +514,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
+      <TabBar />
     </div>
   );
 }

@@ -113,7 +113,7 @@ export default function LoginPage() {
         <div className="mt-6 text-center space-y-2">
           <p className="text-sm lg-ink-2">
             {t("first_time")}
-            <Link href="/register" className="text-[#E23D28] font-semibold ml-1 hover:underline">{t("register_account")}</Link>
+            <Link href="/register" className="text-[var(--tint)] font-semibold ml-1 hover:underline">{t("register_account")}</Link>
           </p>
           <Link href="/" className="inline-flex items-center gap-1 text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>

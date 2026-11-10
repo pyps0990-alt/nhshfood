@@ -173,7 +173,7 @@ export default function AdminMenuPage() {
 
           {/* Error message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 font-medium animate-fade-in">
+            <div className="mb-4 p-3 ios-card rounded-xl text-sm text-red-600 dark:text-red-400 font-medium animate-fade-in">
               {error}
             </div>
           )}
