@@ -31,4 +31,5 @@ if (getApps().length === 0) {
   app = getApps()[0];
 }
 
+export const adminApp = app;
 export const adminDb = getFirestore(app);

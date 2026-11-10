@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/auth";
+import { csvEscape } from "@/lib/security";
+import { taipeiDayBounds, taipeiIsoDate } from "@/lib/time";
 
 // Daily three-way reconciliation for accounting.
 //
@@ -13,39 +15,14 @@ import { cookies } from "next/headers";
 // the accounting office cares about (wallet debited ↔ order recorded). C is a
 // separate line for cash-basis reconciliation with the on-site cashier.
 
-function pad(n: number) { return String(n).padStart(2, "0"); }
-
-function dayBounds(dateStr: string): { start: Date; end: Date } | null {
-  const m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!m) return null;
-  const y = parseInt(m[1], 10);
-  const mo = parseInt(m[2], 10) - 1;
-  const d = parseInt(m[3], 10);
-  const start = new Date(y, mo, d, 0, 0, 0, 0);
-  const end = new Date(y, mo, d, 23, 59, 59, 999);
-  if (isNaN(start.getTime())) return null;
-  return { start, end };
-}
-
-function csvEscape(v: unknown): string {
-  const s = v == null ? "" : String(v);
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
 export async function GET(req: NextRequest) {
-  const jar = await cookies();
-  if (!jar.get("admin_token")) {
-    return NextResponse.json({ error: "未授權" }, { status: 401 });
-  }
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
 
   const url = new URL(req.url);
-  const dateStr = url.searchParams.get("date") || (() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  })();
+  const dateStr = url.searchParams.get("date") || taipeiIsoDate();
 
-  const bounds = dayBounds(dateStr);
+  const bounds = taipeiDayBounds(dateStr);
   if (!bounds) {
     return NextResponse.json({ error: "日期格式錯誤，需為 YYYY-MM-DD" }, { status: 400 });
   }
@@ -87,7 +64,11 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const active = orders.filter((o) => o.status !== "cancelled");
+    // Only orders that became real sales. awaiting_payment / payment_failed
+    // are online-payment attempts that never completed.
+    const active = orders.filter(
+      (o) => !["cancelled", "awaiting_payment", "payment_failed"].includes(o.status)
+    );
 
     const walletOrdersTotal = active
       .filter((o) => o.paymentMethod === "wallet")
@@ -96,6 +77,23 @@ export async function GET(req: NextRequest) {
     const cashOrdersTotal = active
       .filter((o) => o.paymentMethod === "cash")
       .reduce((s, o) => s + o.totalPrice, 0);
+
+    const ecpayOrdersTotal = active
+      .filter((o) => o.paymentMethod === "ecpay")
+      .reduce((s, o) => s + o.totalPrice, 0);
+
+    // Gateway side: what ECPay actually confirmed as paid today.
+    const paySnap = await adminDb.collection("payments")
+      .where("paidAt", ">=", bounds.start.toISOString())
+      .where("paidAt", "<=", bounds.end.toISOString())
+      .get();
+    const gatewayPaid = paySnap.docs.map((d) => d.data());
+    const ecpayGatewayOrders = gatewayPaid
+      .filter((p) => p.purpose === "order")
+      .reduce((s, p) => s + (p.amount || 0), 0);
+    const ecpayGatewayTopUps = gatewayPaid
+      .filter((p) => p.purpose === "top_up")
+      .reduce((s, p) => s + (p.amount || 0), 0);
 
     // ── Fetch the day's wallet-payment transactions ────────────
     const startISO = bounds.start.toISOString();
@@ -130,20 +128,35 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    const walletPaymentsDebited = transactions
+    const walletPaymentsGross = transactions
       .filter((t) => t.type === "payment" && t.method === "wallet")
       .reduce((s, t) => s + Math.abs(t.amount), 0);
 
+    // Refunds of cancelled wallet orders (method "wallet") offset the debit,
+    // so A and B stay comparable when an order is cancelled.
+    const walletOrderRefunds = transactions
+      .filter((t) => t.type === "refund" && t.method === "wallet")
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+
+    const walletPaymentsDebited = walletPaymentsGross - walletOrderRefunds;
+
     const walletTopUps = transactions
-      .filter((t) => t.type === "topup")
+      .filter((t) => t.type === "top_up")
       .reduce((s, t) => s + t.amount, 0);
 
     const walletRefunds = transactions
-      .filter((t) => t.type === "refund")
+      .filter((t) => t.type === "refund" && t.method === "cash_refund")
       .reduce((s, t) => s + Math.abs(t.amount), 0);
 
-    const anomaly = walletOrdersTotal !== walletPaymentsDebited;
+    const ecpayRefundedToWallet = transactions
+      .filter((t) => t.type === "refund" && t.method === "ecpay_to_wallet")
+      .reduce((s, t) => s + Math.abs(t.amount), 0);
+
     const walletDiff = walletOrdersTotal - walletPaymentsDebited;
+    // Note: ECPay orders placed today are confirmed today in the common case;
+    // a small diff can occur around midnight.
+    const ecpayDiff = ecpayOrdersTotal - (ecpayGatewayOrders - ecpayRefundedToWallet);
+    const anomaly = walletDiff !== 0 || ecpayDiff !== 0;
 
     const summary = {
       date: dateStr,
@@ -155,9 +168,13 @@ export async function GET(req: NextRequest) {
       walletDiff,
       anomaly,
       cashOrdersTotal,
+      ecpayOrdersTotal,
+      ecpayGatewayOrders,
+      ecpayGatewayTopUps,
+      ecpayDiff,
       walletTopUps,
       walletRefunds,
-      grandTotal: walletOrdersTotal + cashOrdersTotal,
+      grandTotal: walletOrdersTotal + cashOrdersTotal + ecpayOrdersTotal,
     };
 
     if (format === "csv") {
@@ -172,8 +189,12 @@ export async function GET(req: NextRequest) {
       lines.push(`取消訂單筆數,${summary.cancelledOrders}`);
       lines.push(`錢包扣款訂單總額 (A),${walletOrdersTotal}`);
       lines.push(`錢包實際扣款總額 (B),${walletPaymentsDebited}`);
-      lines.push(`勾稽差額 (A - B),${walletDiff}${anomaly ? "  ⚠ 異常" : ""}`);
+      lines.push(`勾稽差額 (A - B),${walletDiff}${walletDiff !== 0 ? "  ⚠ 異常" : ""}`);
       lines.push(`現金訂單總額,${cashOrdersTotal}`);
+      lines.push(`綠界訂單總額 (C),${ecpayOrdersTotal}`);
+      lines.push(`綠界實收訂單款 (D),${ecpayGatewayOrders}`);
+      lines.push(`綠界勾稽差額 (C - D + 轉錢包退款),${ecpayDiff}${ecpayDiff !== 0 ? "  ⚠ 異常" : ""}`);
+      lines.push(`綠界線上儲值總額,${ecpayGatewayTopUps}`);
       lines.push(`當日儲值總額,${walletTopUps}`);
       lines.push(`當日退費總額,${walletRefunds}`);
       lines.push(`熱食部應收總額,${summary.grandTotal}`);

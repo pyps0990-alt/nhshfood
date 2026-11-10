@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { useStudentAuth } from "@/lib/student-auth";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useStudentAuth, useStudentAuthHydrated } from "@/lib/student-auth";
 import { useT } from "@/lib/i18n";
-import { BackButton } from "@/components/BackButton";
+import { Segmented } from "@/components/glass/Segmented";
+import { NavBar, IconButton } from "@/components/glass/NavBar";
+import { TabBar } from "@/components/glass/TabBar";
+import { usePaymentStatus } from "@/components/glass/PaymentMethodPicker";
 import { MemberBarcode } from "@/components/MemberBarcode";
 import { IconWallet, IconEye, IconEyeOff, IconArrowUp, IconArrowDown, IconBarcode, IconInbox, IconChevronRight } from "@/components/Icons";
 
@@ -28,6 +31,7 @@ const typeLabels: Record<string, string> = {
   top_up: "儲值",
   payment: "付款",
   refund: "退款",
+  admin_note: "備註",
 };
 
 const methodLabels: Record<string, string> = {
@@ -35,13 +39,85 @@ const methodLabels: Record<string, string> = {
   bank_transfer: "銀行轉帳",
   admin_adjustment: "調整",
   wallet: "錢包",
+  ecpay: "線上儲值",
+  ecpay_to_wallet: "線上付款退回",
+  cash_refund: "現金退費",
+  reactivate: "重新啟用",
 };
+
+const TOPUP_PRESETS = [100, 200, 500, 1000];
+
+function OnlineTopUp({ onDone }: { onDone?: () => void }) {
+  const status = usePaymentStatus();
+  const [amount, setAmount] = useState<number>(200);
+  const [custom, setCustom] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  void onDone;
+
+  if (!status?.enabled) return null;
+  const value = custom ? parseInt(custom, 10) || 0 : amount;
+  const valid = value >= status.topUpMin && value <= status.topUpMax;
+
+  async function go() {
+    setBusy(true); setErr("");
+    try {
+      const res = await fetch("/api/payments/ecpay/start", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purpose: "top_up", amount: value }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || "無法建立付款");
+      window.location.href = d.redirectUrl;
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "無法建立付款");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="lg-card p-4 space-y-3">
+      <div className="flex items-center justify-between px-0.5">
+        <p className="font-semibold lg-ink">線上儲值</p>
+        <span className="text-[11px] lg-ink-3">{status.mode === "stage" ? "測試環境・不會真的扣款" : "信用卡・Apple Pay"}</span>
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        {TOPUP_PRESETS.map((p) => (
+          <button key={p} type="button" aria-pressed={!custom && amount === p} onClick={() => { setAmount(p); setCustom(""); }} className="lg-chip justify-center tabular-nums">
+            ${p}
+          </button>
+        ))}
+      </div>
+      <input
+        inputMode="numeric"
+        value={custom}
+        onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 5))}
+        placeholder={`自訂金額（$${status.topUpMin}～$${status.topUpMax}）`}
+        aria-label="自訂儲值金額"
+        className="lg-field lg-pill"
+      />
+      <button onClick={go} disabled={busy || !valid} className="lg-btn lg-btn-lg w-full lg-tinted">
+        {busy ? "前往付款…" : `儲值 $${value || 0}`}
+      </button>
+      {err && <p className="text-[13px] text-red-500 text-center" role="alert">{err}</p>}
+    </div>
+  );
+}
 
 type TxFilter = "all" | "top_up" | "payment" | "refund";
 
 export default function WalletPage() {
+  return (
+    <Suspense>
+      <WalletPageInner />
+    </Suspense>
+  );
+}
+
+function WalletPageInner() {
   const router = useRouter();
   const { student } = useStudentAuth();
+  const hydrated = useStudentAuthHydrated();
   const t = useT();
   const [wallet, setWallet] = useState<WalletInfo | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -51,6 +127,7 @@ export default function WalletPage() {
   const [showBarcode, setShowBarcode] = useState(false);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [filter, setFilter] = useState<TxFilter>("all");
+  const paymentFlag = useSearchParams().get("payment");
 
   const fetchWallet = useCallback(async () => {
     if (!student) return;
@@ -75,6 +152,7 @@ export default function WalletPage() {
   }, [student]);
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!student) { router.push("/login"); return; }
     fetchWallet();
     const onVisible = () => {
@@ -82,7 +160,7 @@ export default function WalletPage() {
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [student, router, fetchWallet]);
+  }, [hydrated, student, router, fetchWallet]);
 
   /* Derived stats */
   const totalIn = transactions.filter(tx => tx.amount > 0).reduce((s, tx) => s + tx.amount, 0);
@@ -92,13 +170,10 @@ export default function WalletPage() {
   if (!student || loading) {
     return (
       <div className="flex-1 flex flex-col">
-        <header className="glass dark:bg-stone-900/85 border-b border-stone-200/50 dark:border-stone-800 px-5 py-3 flex items-center gap-3 sticky top-0 z-10">
-          <BackButton href="/" />
-          <h1 className="text-base font-bold text-stone-900 dark:text-stone-100">{t("wallet")}</h1>
-        </header>
+        <NavBar title={t("wallet")} />
         <main className="flex-1 px-4 py-4 max-w-lg mx-auto w-full space-y-3 animate-pulse">
           {/* Balance card skeleton */}
-          <div className="rounded-2xl bg-gradient-to-br from-[#E23D28]/60 to-[#FF6B35]/60 p-5">
+          <div className="rounded-[28px] lg-tinted opacity-70 p-5">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <div className="h-3 w-16 bg-white/20 rounded mb-2" />
@@ -113,7 +188,7 @@ export default function WalletPage() {
           </div>
           {/* Transaction skeletons */}
           {[0, 1, 2].map(i => (
-            <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-stone-100 dark:bg-stone-800/50">
+            <div key={i} className="flex items-center gap-3 p-3 rounded-[20px] lg-thin">
               <div className="w-9 h-9 rounded-xl bg-stone-200 dark:bg-stone-700" />
               <div className="flex-1">
                 <div className="h-3.5 w-20 bg-stone-200 dark:bg-stone-700 rounded mb-1.5" />
@@ -128,44 +203,46 @@ export default function WalletPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      {/* Header */}
-      <header className="glass dark:bg-stone-900/85 border-b border-stone-200/50 dark:border-stone-800 px-5 py-3 flex items-center gap-3 sticky top-0 z-10">
-        <BackButton href="/" />
-        <h1 className="text-base font-bold text-stone-900 dark:text-stone-100">{t("wallet")}</h1>
-        <div className="ml-auto">
-          <button
-            onClick={() => setShowBarcode(!showBarcode)}
-            className={`p-2 rounded-lg transition-colors ${showBarcode ? "bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200" : "text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800"}`}
-          >
+    <div className="flex-1 flex flex-col has-tabbar">
+      <NavBar
+        large
+        title={t("wallet")}
+        right={
+          <IconButton label="會員條碼" onClick={() => setShowBarcode(!showBarcode)}>
             <IconBarcode size={18} />
-          </button>
-        </div>
-      </header>
+          </IconButton>
+        }
+      />
 
       <main className="flex-1 px-4 py-4 max-w-lg mx-auto w-full space-y-3">
         {error && (
-          <div className="p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm animate-fade-in">
+          <div className="lg-card px-4 py-3 text-red-600 dark:text-red-400 text-sm animate-fade-in" role="alert">
             {error}
           </div>
         )}
 
+        {paymentFlag === "success" && (
+          <div className="lg-card px-4 py-3 text-emerald-700 dark:text-emerald-400 text-sm font-medium lg-rise" role="status">儲值成功，餘額已更新。</div>
+        )}
+        {paymentFlag === "failed" && (
+          <div className="lg-card px-4 py-3 text-red-600 dark:text-red-400 text-sm font-medium lg-rise" role="alert">付款未完成，未扣款也未入帳。</div>
+        )}
+
         {/* === Balance Card === */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#E23D28] to-[#FF6B35] p-5 text-white shadow-lg">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-white/8 rounded-full -translate-y-8 translate-x-8" />
-          <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/5 rounded-full translate-y-6 -translate-x-6" />
+        <div className="relative overflow-hidden rounded-[30px] lg-tinted p-5 lg-rise">
+          <div className="absolute -top-12 -right-10 w-44 h-44 bg-white/15 rounded-full blur-2xl" />
 
           <div className="flex items-start justify-between mb-3">
             <div>
               <p className="text-white/70 text-xs font-medium">{t("wallet_balance")}</p>
-              <p className="text-3xl font-black mt-0.5">${wallet?.balance ?? 0}</p>
+              <p className="text-[42px] leading-none font-bold mt-1.5 tabular-nums tracking-tight" style={{ fontFamily: "var(--font-rounded)" }}>${wallet?.balance ?? 0}</p>
             </div>
-            <div className="w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">
+            <div className="w-11 h-11 bg-white/20 rounded-full flex items-center justify-center">
               <IconWallet size={20} />
             </div>
           </div>
 
-          <div className="flex items-center gap-4 pt-2 border-t border-white/15">
+          <div className="relative flex items-center gap-4 pt-3 mt-1 border-t border-white/20">
             <div className="flex-1">
               <p className="text-white/50 text-[10px] mb-0.5">{t("wallet_code")}</p>
               <button
@@ -214,7 +291,10 @@ export default function WalletPage() {
           </div>
         )}
 
-        {/* === Top-up Info === */}
+        {/* === Online top-up (ECPay) === */}
+        <OnlineTopUp />
+
+        {/* === Counter top-up info === */}
         <div className="card-premium p-4">
           <div className="flex items-center gap-2.5 mb-3">
             <div className="w-7 h-7 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -222,14 +302,14 @@ export default function WalletPage() {
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
               </svg>
             </div>
-            <p className="text-xs font-semibold text-stone-700 dark:text-stone-300">請至熱食部櫃台或聯繫管理員儲值</p>
+            <p className="text-xs font-semibold lg-ink-2">也可至熱食部櫃台以現金儲值</p>
           </div>
           <div className="flex gap-2">
             <a
               href="https://www.instagram.com/cyj._.1231"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-semibold shadow-sm hover:shadow-md transition-all active:scale-95"
+              className="lg-btn lg-btn-sm flex-1 lg-thin lg-ink-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1112.63 8 4 4 0 0116 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
@@ -238,7 +318,7 @@ export default function WalletPage() {
             </a>
             <a
               href="mailto:pyps0990@gmail.com"
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-semibold border border-stone-200 dark:border-stone-700 hover:bg-stone-200 dark:hover:bg-stone-700 transition-all active:scale-95"
+              className="lg-btn lg-btn-sm flex-1 lg-thin lg-ink-2"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 01-2.06 0L2 7"/>
@@ -251,26 +331,18 @@ export default function WalletPage() {
         {/* === Transaction History === */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-sm font-bold text-stone-800 dark:text-stone-200">交易紀錄</h2>
+            <h2 className="text-[17px] font-bold lg-ink px-1">交易紀錄</h2>
             <span className="text-[10px] text-stone-400 font-medium">{filteredTx.length} 筆</span>
           </div>
 
           {/* Filter tabs */}
-          <div className="flex gap-1.5 mb-3">
-            {([["all", "全部"], ["top_up", "儲值"], ["payment", "付款"], ["refund", "退款"]] as [TxFilter, string][]).map(([key, label]) => (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
-                  filter === key
-                    ? "bg-[#E23D28] text-white shadow-sm"
-                    : "bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 hover:bg-stone-200 dark:hover:bg-stone-700"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Segmented
+            className="mb-3"
+            ariaLabel="篩選交易"
+            value={filter}
+            onChange={setFilter}
+            options={[{ value: "all", label: "全部" }, { value: "top_up", label: "儲值" }, { value: "payment", label: "付款" }, { value: "refund", label: "退款" }]}
+          />
 
           {/* Transaction list */}
           {filteredTx.length === 0 ? (
@@ -281,15 +353,15 @@ export default function WalletPage() {
               </p>
             </div>
           ) : (
-            <div className="card-premium divide-y divide-stone-100 dark:divide-stone-800 overflow-hidden">
+            <div className="lg-card lg-list">
               {filteredTx.map((tx) => (
                 <button
                   key={tx.id}
                   onClick={() => setSelectedTx(tx)}
-                  className="w-full px-4 py-3 flex items-center justify-between hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
+                  className="w-full px-4 py-3 flex items-center justify-between active:bg-black/5 dark:active:bg-white/5 transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center ${
                       tx.amount > 0
                         ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
                         : "bg-red-100 dark:bg-red-900/30 text-red-500 dark:text-red-400"
@@ -297,7 +369,7 @@ export default function WalletPage() {
                       {tx.amount > 0 ? <IconArrowDown size={14} /> : <IconArrowUp size={14} />}
                     </div>
                     <div className="text-left">
-                      <p className="text-xs font-semibold text-stone-800 dark:text-stone-200">
+                      <p className="text-[14px] font-semibold lg-ink">
                         {typeLabels[tx.type] || tx.type}
                         {tx.note && <span className="text-stone-400 dark:text-stone-500 font-normal"> · {tx.note}</span>}
                       </p>
@@ -323,26 +395,24 @@ export default function WalletPage() {
         <div className="h-4" />
       </main>
 
+      <TabBar />
+
       {/* === Transaction Detail Modal === */}
       {selectedTx && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setSelectedTx(null)}>
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-backdrop-in" />
+          <div className="absolute inset-0 bg-black/25 animate-backdrop-in" />
           <div
-            className="relative w-full max-w-md mx-4 mb-4 sm:mb-0 bg-white dark:bg-stone-900 rounded-2xl shadow-2xl overflow-hidden animate-modal-in"
+            className="relative w-full max-w-md mx-3 mb-3 sm:mb-0 lg-thick rounded-[30px] overflow-hidden animate-modal-in"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className={`px-5 py-4 flex items-center justify-between ${
-              selectedTx.amount > 0
-                ? "bg-emerald-500"
-                : "bg-red-500"
-            } text-white`}>
+            <div className="px-5 pt-5 pb-3 flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium opacity-80">{typeLabels[selectedTx.type] || selectedTx.type}</p>
-                <p className="text-2xl font-black mt-0.5">
+                <p className="text-xs font-medium lg-ink-3">{typeLabels[selectedTx.type] || selectedTx.type}</p>
+                <p className={`text-[30px] font-bold mt-0.5 tabular-nums ${selectedTx.amount > 0 ? "text-emerald-600" : "text-red-500"}`}>
                   {selectedTx.amount > 0 ? "+" : "-"}${Math.abs(selectedTx.amount)}
                 </p>
               </div>
-              <button onClick={() => setSelectedTx(null)} className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors">
+              <button onClick={() => setSelectedTx(null)} aria-label="關閉" className="lg-btn lg-btn-icon lg-thin lg-ink-2 !w-9 !min-h-9">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
@@ -360,8 +430,8 @@ export default function WalletPage() {
                 ["交易編號", selectedTx.id.slice(0, 12) + "..."],
               ].map(([label, value]) => (
                 <div key={label} className="flex justify-between items-center text-sm">
-                  <span className="text-stone-400 dark:text-stone-500 text-xs">{label}</span>
-                  <span className={`font-medium text-stone-800 dark:text-stone-200 text-xs ${label === "交易編號" ? "font-mono text-stone-400 dark:text-stone-500" : ""} ${label === "交易後餘額" ? "font-mono font-bold" : ""}`}>
+                  <span className="lg-ink-3 text-xs">{label}</span>
+                  <span className={`font-medium lg-ink text-xs text-right ${label === "交易編號" ? "font-mono text-stone-400 dark:text-stone-500" : ""} ${label === "交易後餘額" ? "font-mono font-bold" : ""}`}>
                     {value}
                   </span>
                 </div>

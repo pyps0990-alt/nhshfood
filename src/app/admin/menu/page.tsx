@@ -139,9 +139,9 @@ export default function AdminMenuPage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="bg-stone-900 text-white px-5 py-4 flex items-center gap-3">
+      <header data-solid="true" className="lg-nav lg-smoke text-white px-5 py-4 flex items-center gap-3">
         <BackButton href="/admin/hub" variant="light" />
-        <h1 className="text-lg font-bold tracking-tight">菜單管理</h1>
+        <h1 className="text-lg font-bold tracking-tight whitespace-nowrap">菜單管理</h1>
         <button onClick={() => { resetForm(); setShowForm(!showForm); }}
           className="ml-auto flex items-center gap-1.5 text-sm bg-emerald-500 hover:bg-emerald-600 px-4 py-2 rounded-xl font-semibold transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -151,14 +151,14 @@ export default function AdminMenuPage() {
         </button>
       </header>
 
-      <div className="flex gap-2 px-5 py-4 border-b border-stone-100 dark:border-stone-800">
+      <div className="flex gap-2 px-5 py-4 border-b border-black/5 dark:border-white/10">
         {["breakfast", "lunch"].map((d) => (
           <button key={d} onClick={() => setDept(d)}
             className={`px-5 py-2 rounded-xl text-sm font-semibold transition-all ${dept === d ? "bg-stone-900 text-white shadow-md dark:bg-stone-100 dark:text-stone-900" : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:hover:bg-stone-700"}`}>
             {d === "breakfast" ? "早餐部" : "午餐部"}
           </button>
         ))}
-        <span className="ml-auto text-sm text-stone-400 dark:text-stone-500 self-center">{items.length} 項品項</span>
+        <span className="ml-auto text-sm lg-ink-3 self-center">{items.length} 項品項</span>
       </div>
 
       {/* Add / Edit form */}
@@ -168,12 +168,12 @@ export default function AdminMenuPage() {
             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${editing ? "bg-blue-500" : "bg-emerald-500"}`}>
               {editing ? "✎" : "+"}
             </div>
-            <h2 className="font-bold text-stone-800 dark:text-stone-200 text-lg">{editing ? "編輯品項" : "新增品項"}</h2>
+            <h2 className="font-bold lg-ink text-lg">{editing ? "編輯品項" : "新增品項"}</h2>
           </div>
 
           {/* Error message */}
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl text-sm text-red-600 dark:text-red-400 font-medium animate-fade-in">
+            <div className="mb-4 p-3 ios-card rounded-xl text-sm text-red-600 dark:text-red-400 font-medium animate-fade-in">
               {error}
             </div>
           )}
@@ -183,20 +183,20 @@ export default function AdminMenuPage() {
             <div className="flex items-start gap-4">
               <div
                 onClick={() => fileRef.current?.click()}
-                className={`w-24 h-24 rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all shrink-0 ${
+                className={`w-24 h-24 rounded-[22px] border-2 border-dashed flex items-center justify-center cursor-pointer transition-all shrink-0 ${
                   imageUrl ? "border-transparent" : "border-stone-300 hover:border-stone-400 bg-stone-50 dark:border-stone-600 dark:hover:border-stone-500 dark:bg-stone-800"
                 }`}
               >
                 {uploading ? (
                   <div className="w-6 h-6 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin" />
                 ) : imageUrl ? (
-                  <img src={imageUrl} alt="" className="w-full h-full object-cover rounded-2xl" />
+                  <img src={imageUrl} alt="" className="w-full h-full object-cover rounded-[22px]" />
                 ) : (
                   <div className="text-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a8a29e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mx-auto">
                       <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
                     </svg>
-                    <span className="text-[10px] text-stone-400 dark:text-stone-500 mt-1 block">上傳圖片</span>
+                    <span className="text-[10px] lg-ink-3 mt-1 block">上傳圖片</span>
                   </div>
                 )}
               </div>
@@ -208,25 +208,25 @@ export default function AdminMenuPage() {
                   onChange={(e) => setName(e.target.value)}
                   placeholder="品名（必填）"
                   required
-                  className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-medium dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                  className="lg-field w-full text-sm font-medium"
                 />
                 <div className="flex gap-2">
                   <div className="relative w-1/2">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 dark:text-stone-500 text-sm">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 lg-ink-3 text-sm">$</span>
                     <input
                       value={price}
                       onChange={(e) => setPrice(e.target.value)}
                       placeholder="價格"
                       type="number"
                       required
-                      className="w-full pl-7 pr-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-medium dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                      className="lg-field w-full pl-7 pr-4 text-sm font-medium"
                     />
                   </div>
                   <input
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     placeholder="描述（選填）"
-                    className="w-1/2 px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                    className="lg-field w-1/2 text-sm"
                   />
                 </div>
               </div>
@@ -234,7 +234,7 @@ export default function AdminMenuPage() {
 
             {/* Category — quick select or type */}
             <div>
-              <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-2">分類</label>
+              <label className="block text-xs font-semibold lg-ink-2 mb-2">分類</label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {existingCategories.map((c) => (
                   <button key={c} type="button" onClick={() => setCategory(c)}
@@ -257,14 +257,14 @@ export default function AdminMenuPage() {
                   onChange={(e) => setCategory(e.target.value)}
                   placeholder="輸入分類名稱（如：主食、飲料）"
                   required
-                  className="w-full px-4 py-2.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                  className="lg-field w-full text-sm"
                 />
               )}
             </div>
 
             {/* Tags */}
             <div>
-              <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-2">特殊標籤</label>
+              <label className="block text-xs font-semibold lg-ink-2 mb-2">特殊標籤</label>
               <div className="flex flex-wrap gap-2">
                 {ALL_TAGS.map((tag) => (
                   <button key={tag} type="button" onClick={() => toggleTag(tag)}
@@ -281,13 +281,13 @@ export default function AdminMenuPage() {
 
             {/* Stock */}
             <div>
-              <label className="block text-xs font-semibold text-stone-500 dark:text-stone-400 mb-2">庫存管理</label>
+              <label className="block text-xs font-semibold lg-ink-2 mb-2">庫存管理</label>
               <div className="flex items-center gap-3">
                 <button type="button" onClick={() => { setStockEnabled(!stockEnabled); if (stockEnabled) setStockQty(""); }}
                   className={`relative w-11 h-6 rounded-full transition-colors ${stockEnabled ? "bg-emerald-500" : "bg-stone-200 dark:bg-stone-700"}`}>
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${stockEnabled ? "translate-x-5" : ""}`} />
                 </button>
-                <span className="text-sm text-stone-600 dark:text-stone-400">{stockEnabled ? "限量供應" : "不限量"}</span>
+                <span className="text-sm lg-ink-2">{stockEnabled ? "限量供應" : "不限量"}</span>
                 {stockEnabled && (
                   <input
                     value={stockQty}
@@ -295,7 +295,7 @@ export default function AdminMenuPage() {
                     placeholder="數量"
                     type="number"
                     min="0"
-                    className="w-24 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm font-medium dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-300 focus:border-transparent"
+                    className="lg-field w-24 text-sm font-medium"
                   />
                 )}
               </div>
@@ -316,7 +316,7 @@ export default function AdminMenuPage() {
                 {saving ? "儲存中..." : editing ? "更新品項" : "新增品項"}
               </button>
               <button type="button" onClick={resetForm}
-                className="px-6 py-3 rounded-xl text-sm font-medium text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 transition-colors">
+                className="px-6 py-3 rounded-xl text-sm font-medium lg-ink-2 lg-thin hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
                 取消
               </button>
             </div>
@@ -330,20 +330,20 @@ export default function AdminMenuPage() {
           <div className="text-center mt-16 space-y-3">
             <div className="flex justify-center">
               {dept === "breakfast" ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-300 dark:text-stone-600"><path d="M3 11h18M3 11v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 11l1.5-5A2 2 0 0 1 6.4 4.5h11.2a2 2 0 0 1 1.9 1.5L21 11"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-3"><path d="M3 11h18M3 11v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 11l1.5-5A2 2 0 0 1 6.4 4.5h11.2a2 2 0 0 1 1.9 1.5L21 11"/></svg>
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-300 dark:text-stone-600"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z"/><path d="M8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 8 15 8"/></svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-3"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z"/><path d="M8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 8 15 8"/></svg>
               )}
             </div>
-            <p className="text-stone-400 dark:text-stone-500">沒有品項，點右上角新增</p>
+            <p className="lg-ink-3">沒有品項，點右上角新增</p>
           </div>
         )}
 
         {Object.entries(grouped).map(([cat, catItems]) => (
           <div key={cat}>
-            <h3 className="text-sm font-bold text-stone-500 dark:text-stone-400 mb-2 flex items-center gap-2">
+            <h3 className="text-sm font-bold lg-ink-2 mb-2 flex items-center gap-2">
               <span>{cat}</span>
-              <span className="text-xs font-normal text-stone-400 dark:text-stone-500">{catItems.length} 項</span>
+              <span className="text-xs font-normal lg-ink-3">{catItems.length} 項</span>
             </h3>
             <div className="space-y-2">
               {catItems.map((item) => (
@@ -354,15 +354,15 @@ export default function AdminMenuPage() {
                   ) : (
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-stone-50 to-stone-100 dark:from-stone-800 dark:to-stone-700 flex items-center justify-center shrink-0">
                       {dept === "breakfast" ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 dark:text-stone-500"><path d="M3 11h18M3 11v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 11l1.5-5A2 2 0 0 1 6.4 4.5h11.2a2 2 0 0 1 1.9 1.5L21 11"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-3"><path d="M3 11h18M3 11v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6M3 11l1.5-5A2 2 0 0 1 6.4 4.5h11.2a2 2 0 0 1 1.9 1.5L21 11"/></svg>
                       ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 dark:text-stone-500"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z"/><path d="M8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 8 15 8"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="lg-ink-3"><path d="M2.27 21.7s9.87-3.5 12.73-6.36a4.5 4.5 0 0 0-6.36-6.37C5.77 11.84 2.27 21.7 2.27 21.7z"/><path d="M8.64 14l-2.05-2.04M15.34 15l-2.46-2.46"/><path d="M22 9s-1.33-2-3.5-2C16.86 7 15 8 15 8"/></svg>
                       )}
                     </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold truncate text-stone-900 dark:text-stone-100">{item.name}</span>
+                      <span className="font-semibold truncate lg-ink">{item.name}</span>
                       {(item.tags || []).map((tag) => (
                         <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${MENU_TAG_COLORS[tag]}`}>
                           {MENU_TAG_LABELS[tag]}
@@ -375,8 +375,8 @@ export default function AdminMenuPage() {
                         <span className="text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-md shrink-0 font-bold">停售</span>
                       )}
                     </div>
-                    <p className="text-sm text-stone-500 dark:text-stone-400 mt-0.5">
-                      <span className="font-semibold text-stone-700 dark:text-stone-300">${item.price}</span>
+                    <p className="text-sm lg-ink-2 mt-0.5">
+                      <span className="font-semibold lg-ink">${item.price}</span>
                       {item.stock !== null && item.stock !== undefined && (
                         <span className="ml-1.5 text-xs">庫存: {item.stock}</span>
                       )}

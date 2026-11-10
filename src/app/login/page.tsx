@@ -54,26 +54,26 @@ export default function LoginPage() {
     }
   }
 
-  const inputCls = "w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all";
+  const inputCls = "w-full px-4 py-3 lg-surface border border-white/60 dark:border-white/10 rounded-[22px] text-sm font-medium lg-ink placeholder-stone-400 dark:placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all";
 
   return (
     <main className="flex-1 flex flex-col px-6 py-12">
       <div className="w-full max-w-sm mx-auto animate-fade-in flex flex-col flex-1">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-200/50 dark:shadow-red-900/30">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-[22px] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-200/50 dark:shadow-red-900/30">
             <IconSchool size={32} className="text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">{t("login_title")}</h1>
-          <p className="text-stone-500 dark:text-stone-400 text-sm mt-2">{t("login_subtitle")}</p>
+          <h1 className="text-2xl font-bold lg-ink">{t("login_title")}</h1>
+          <p className="lg-ink-2 text-sm mt-2">{t("login_subtitle")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 flex-1 flex flex-col">
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">{t("student_id")}</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">{t("student_id")}</label>
             <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder={t("student_id_placeholder")} required className={inputCls} />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">{t("password")}</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">{t("password")}</label>
             <div className="relative">
               <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t("password_placeholder")} required className={`${inputCls} pr-11`} />
               <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">
@@ -91,7 +91,7 @@ export default function LoginPage() {
           <div className="flex-1 min-h-4" />
 
           <button type="submit" disabled={loading || success}
-            className={`w-full rounded-2xl px-6 py-4 font-bold text-lg shadow-lg shadow-red-200/50 dark:shadow-red-900/30 hover:shadow-xl transition-colors duration-300 active:scale-[0.98] disabled:opacity-90 flex items-center justify-center gap-2 text-white ${success ? "bg-emerald-500" : "bg-[#E23D28] hover:bg-[#c9321f]"}`}>
+            className={`lg-btn lg-btn-lg w-full ${success ? "bg-emerald-500 text-white" : "lg-tinted"}`}>
             {success ? (
               <>
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="animate-scale-bounce">
@@ -111,9 +111,9 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center space-y-2">
-          <p className="text-sm text-stone-500 dark:text-stone-400">
+          <p className="text-sm lg-ink-2">
             {t("first_time")}
-            <Link href="/register" className="text-[#E23D28] font-semibold ml-1 hover:underline">{t("register_account")}</Link>
+            <Link href="/register" className="text-[var(--tint)] font-semibold ml-1 hover:underline">{t("register_account")}</Link>
           </p>
           <Link href="/" className="inline-flex items-center gap-1 text-sm text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>

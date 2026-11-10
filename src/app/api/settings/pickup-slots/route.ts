@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import { z } from "zod";
-import { getCached, setCached } from "@/lib/menu-cache";
+import { getCached, setCached, invalidateCached } from "@/lib/menu-cache";
+import { requireAdmin } from "@/lib/auth";
+import { auditLog } from "@/lib/security";
 
 const DOC_PATH = "settings/pickupSlots";
 const CACHE_KEY = "pickup-slots";
@@ -31,11 +33,13 @@ export async function GET() {
 }
 
 const updateSchema = z.object({
-  breakfast: z.array(z.string().max(20)).min(1).max(30),
-  lunch: z.array(z.string().max(20)).min(1).max(30),
+  breakfast: z.array(z.string().trim().min(1).max(20).regex(/^[^<>]+$/)).min(1).max(30),
+  lunch: z.array(z.string().trim().min(1).max(20).regex(/^[^<>]+$/)).min(1).max(30),
 });
 
 export async function PUT(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
   try {
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
@@ -49,6 +53,8 @@ export async function PUT(req: NextRequest) {
       updatedAt: new Date().toISOString(),
     });
 
+    invalidateCached(CACHE_KEY);
+    await auditLog({ actor: auth.username, action: "settings.pickup_slots" });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("PUT /api/settings/pickup-slots error:", err);

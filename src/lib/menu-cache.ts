@@ -45,3 +45,7 @@ export function getCached<T>(key: string, ttlMs: number = TTL_MS): T | null {
 export function setCached<T>(key: string, data: T): void {
   cache.set(key, { data, timestamp: Date.now() });
 }
+
+export function invalidateCached(key: string): void {
+  cache.delete(key);
+}

@@ -35,6 +35,10 @@ function getTransporter() {
   return transporter;
 }
 
+function escapeHtml(s: string): string {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
 const statusLabels: Record<string, string> = {
   pending: "訂單已收到",
   confirmed: "準備中",
@@ -55,7 +59,7 @@ export async function sendOrderNotification(params: {
   const t = getTransporter();
   if (!t) return { sent: false, reason: "mailer_not_configured" };
 
-  const { to, studentName, orderNumber, status, department, items, totalPrice } = params;
+  const { to, orderNumber, status, department, items, totalPrice } = params;
   const displayNum = orderNumber.length > 6 ? orderNumber.slice(-4) : orderNumber;
   const deptLabel = department === "breakfast" ? "早餐部" : "午餐部";
   const statusLabel = statusLabels[status] || status;
@@ -63,12 +67,6 @@ export async function sendOrderNotification(params: {
   const subject = `【內湖高中熱食部】訂單 #${displayNum} ${statusLabel}`;
 
   const statusColor = status === "ready" ? "#059669" : status === "cancelled" ? "#dc2626" : status === "confirmed" ? "#2563eb" : "#E23D28";
-  const statusSvg: Record<string, string> = {
-    pending: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
-    confirmed: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>`,
-    ready: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`,
-    cancelled: `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`,
-  };
   const statusMessages: Record<string, string> = {
     pending: "我們已收到您的訂單",
     confirmed: "店家已確認，正在為您準備餐點",
@@ -87,7 +85,7 @@ export async function sendOrderNotification(params: {
 
   const itemRows = items.map((i) =>
     `<tr>
-      <td style="padding:8px 0;font-size:14px;color:#333;border-bottom:1px solid #f0f0f0">${i.name} x ${i.quantity}</td>
+      <td style="padding:8px 0;font-size:14px;color:#333;border-bottom:1px solid #f0f0f0">${escapeHtml(i.name)} x ${i.quantity}</td>
       <td style="padding:8px 0;font-size:14px;color:#333;text-align:right;font-weight:600;border-bottom:1px solid #f0f0f0">$${i.price * i.quantity}</td>
     </tr>`
   ).join("");
@@ -153,6 +151,23 @@ export async function sendOrderNotification(params: {
     return { sent: true };
   } catch (err) {
     console.error("Email send error:", err);
+    return { sent: false, reason: "send_failed" };
+  }
+}
+
+export async function sendTestEmail(to: string) {
+  const t = getTransporter();
+  if (!t) return { sent: false, reason: "mailer_not_configured" };
+  try {
+    await t.sendMail({
+      from: `"內湖高中熱食部" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: "【內湖高中熱食部】測試通知",
+      html: `<div style="font-family:-apple-system,sans-serif;padding:24px"><h2 style="color:#E23D28">通知設定正常</h2><p>之後訂單狀態更新時，會寄到這個信箱。</p></div>`,
+    });
+    return { sent: true };
+  } catch (err) {
+    console.error("Test email error:", err);
     return { sent: false, reason: "send_failed" };
   }
 }

@@ -81,13 +81,13 @@ export default function PickupSlotsPage() {
 
   function SlotEditor({ dept, label }: { dept: "breakfast" | "lunch"; label: string }) {
     return (
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-2xl p-5">
-        <h3 className="text-lg font-bold text-stone-800 dark:text-stone-200 mb-4">{label}</h3>
+      <div className="lg-surface border border-white/60 dark:border-white/10 rounded-[22px] p-5">
+        <h3 className="text-lg font-bold lg-ink mb-4">{label}</h3>
         <div className="flex flex-wrap gap-2 mb-4">
           {slots![dept].map((slot, i) => (
             <div
               key={`${slot}-${i}`}
-              className="flex items-center gap-1 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl px-3 py-1.5 text-sm"
+              className="flex items-center gap-1 lg-surface border border-white/60 dark:border-white/10 rounded-xl px-3 py-1.5 text-sm"
             >
               <button
                 onClick={() => moveSlot(dept, i, -1)}
@@ -96,7 +96,7 @@ export default function PickupSlotsPage() {
               >
                 ◀
               </button>
-              <span className="font-medium text-stone-700 dark:text-stone-300 mx-1">{slot}</span>
+              <span className="font-medium lg-ink mx-1">{slot}</span>
               <button
                 onClick={() => moveSlot(dept, i, 1)}
                 className="text-stone-400 hover:text-stone-600 dark:text-stone-500 dark:hover:text-stone-300 text-xs"
@@ -122,11 +122,11 @@ export default function PickupSlotsPage() {
             onChange={(e) => setNewSlot({ ...newSlot, [dept]: e.target.value })}
             onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSlot(dept))}
             placeholder="新增時段，例：12:15"
-            className="flex-1 px-4 py-2.5 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-sm dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+            className="lg-field flex-1 text-sm"
           />
           <button
             onClick={() => addSlot(dept)}
-            className="px-4 py-2.5 bg-[#E23D28] text-white rounded-xl text-sm font-bold hover:bg-[#c9321f] transition-colors"
+            className="px-4 py-2.5 lg-tinted rounded-xl text-sm font-bold hover:bg-[#c9321f] transition-colors"
           >
             新增
           </button>
@@ -139,7 +139,7 @@ export default function PickupSlotsPage() {
     <main className="flex-1 px-4 py-6 max-w-xl mx-auto w-full">
       <div className="flex items-center gap-3 mb-6">
         <BackButton href="/admin/hub" />
-        <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">取餐時段設定</h1>
+        <h1 className="text-2xl font-bold lg-ink">取餐時段設定</h1>
       </div>
 
       <div className="space-y-5">
@@ -151,7 +151,7 @@ export default function PickupSlotsPage() {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="flex-1 bg-[#E23D28] hover:bg-[#c9321f] text-white rounded-2xl px-6 py-3.5 font-bold shadow-lg shadow-red-200/50 dark:shadow-red-950/50 transition-all disabled:opacity-50"
+          className="flex-1 lg-tinted rounded-[22px] px-6 py-3.5 font-bold shadow-lg shadow-red-200/50 dark:shadow-red-950/50 transition-all disabled:opacity-50"
         >
           {saving ? "儲存中..." : "儲存設定"}
         </button>

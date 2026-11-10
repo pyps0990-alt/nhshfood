@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminDb } from "@/lib/firebase-admin";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
+import { menuUpdateSchema } from "@/lib/schemas/menu";
+import { auditLog } from "@/lib/security";
 import { invalidateMenuCache } from "@/lib/menu-cache";
 
 export async function PATCH(
@@ -9,49 +11,31 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Only admins can update menu items
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "未授權" }, { status: 401 });
-    }
+    const auth = await requireAdmin();
+    if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;
     if (!/^[a-zA-Z0-9]{10,30}$/.test(id)) {
       return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
     }
 
-    const body = await req.json();
-
-    // Only allow specific fields to be updated
-    const allowedFields = ["name", "price", "category", "department", "description", "imageUrl", "available", "tags", "stock", "soldOut"];
-    const update: Record<string, unknown> = {};
-    const validTags = ["promotion", "seasonal", "daily_special"];
-
-    for (const key of allowedFields) {
-      if (key in body) {
-        if (key === "price") {
-          update[key] = Math.round(Number(body[key]));
-        } else if (key === "available" || key === "soldOut") {
-          update[key] = Boolean(body[key]);
-        } else if (key === "department") {
-          update[key] = body[key] === "lunch" ? "lunch" : "breakfast";
-        } else if (key === "tags") {
-          update[key] = Array.isArray(body[key])
-            ? body[key].filter((t: string) => validTags.includes(t))
-            : [];
-        } else if (key === "stock") {
-          update[key] = typeof body[key] === "number" && body[key] >= 0
-            ? Math.round(body[key])
-            : null;
-        } else if (typeof body[key] === "string") {
-          update[key] = body[key].replace(/[<>]/g, "").trim().slice(0, 200);
-        } else {
-          update[key] = body[key];
-        }
-      }
+    const parsed = menuUpdateSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "資料格式錯誤" }, { status: 400 });
+    }
+    const update: Record<string, unknown> = Object.fromEntries(
+      Object.entries(parsed.data).filter(([, v]) => v !== undefined)
+    );
+    // Restocking an item that auto-sold-out should make it orderable again.
+    if (typeof update.stock === "number" && update.stock > 0 && update.soldOut === undefined) {
+      update.soldOut = false;
+    }
+    if (Object.keys(update).length === 0) {
+      return NextResponse.json({ error: "沒有需要更新的資料" }, { status: 400 });
     }
 
     await adminDb.collection("menuItems").doc(id).update(update);
+    await auditLog({ actor: auth.username, action: "menu.update", target: id, detail: update });
 
     // Invalidate in-memory cache + purge the edge/CDN cache
     invalidateMenuCache();
@@ -69,10 +53,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "未授權" }, { status: 401 });
-    }
+    const auth = await requireAdmin();
+    if (auth instanceof NextResponse) return auth;
 
     const { id } = await params;
     if (!/^[a-zA-Z0-9]{10,30}$/.test(id)) {
@@ -80,6 +62,7 @@ export async function DELETE(
     }
 
     await adminDb.collection("menuItems").doc(id).delete();
+    await auditLog({ actor: auth.username, action: "menu.delete", target: id });
     invalidateMenuCache();
     try { revalidatePath("/api/menu"); } catch {}
 

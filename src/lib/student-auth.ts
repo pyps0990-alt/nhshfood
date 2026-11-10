@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { useSyncExternalStore } from "react";
 
 export interface StudentProfile {
   id: string;
@@ -38,3 +39,14 @@ export const useStudentAuth = create<StudentAuthState>()(
     }
   )
 );
+
+/** True once the persisted student profile has been read from localStorage. */
+export function useStudentAuthHydrated(): boolean {
+  return useSyncExternalStore(
+    (cb) => useStudentAuth.persist?.onFinishHydration?.(cb) ?? (() => {}),
+    () => useStudentAuth.persist?.hasHydrated?.() ?? false,
+    // Server snapshot AND the client's hydration render both report false, so
+    // effects in the first commit never act on the not-yet-restored profile.
+    () => false
+  );
+}

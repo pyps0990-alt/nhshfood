@@ -40,15 +40,15 @@ function FillButton({ onReady, label = "下一步" }: { onReady: () => void; lab
     <button
       onClick={ready ? onReady : undefined}
       disabled={!ready}
-      className={`relative mt-8 w-full max-w-xs h-14 rounded-2xl font-bold text-lg overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/40 ${
+      className={`relative mt-8 w-full max-w-xs h-14 rounded-[22px] font-bold text-lg overflow-hidden transition-all duration-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-white/40 ${
         ready
-          ? "bg-white text-[#E23D28] shadow-xl active:scale-[0.97] cursor-pointer"
+          ? "bg-white text-[var(--tint)] shadow-xl active:scale-[0.97] cursor-pointer"
           : "bg-white/20 text-white/40 cursor-not-allowed"
       }`}
     >
       {!ready && (
         <div
-          className="absolute inset-0 bg-white/30 rounded-2xl transition-none"
+          className="absolute inset-0 bg-white/30 rounded-[22px] transition-none"
           style={{ width: `${progress * 100}%` }}
         />
       )}
@@ -56,7 +56,7 @@ function FillButton({ onReady, label = "下一步" }: { onReady: () => void; lab
     </button>
   );
 }
-const INPUT_CLASS = "w-full px-4 py-3 bg-white/10 border border-white/20 rounded-2xl text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/50 transition-all";
+const INPUT_CLASS = "w-full px-4 py-3 bg-white/10 border border-white/20 rounded-[22px] text-sm font-medium text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-white/50 transition-all";
 const LABEL_CLASS = "block text-sm font-semibold text-white/90 mb-1.5";
 
 /* ── Progress Bar ── */
@@ -95,7 +95,7 @@ function StepWelcome({ onNext }: { onNext: () => void }) {
       </p>
       <button
         onClick={onNext}
-        className="mt-10 w-full max-w-xs h-14 rounded-2xl font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150 ob-btn-hint"
+        className="mt-10 w-full max-w-xs h-14 rounded-[22px] font-bold text-lg bg-white text-[var(--tint)] shadow-xl active:scale-[0.97] transition-all duration-150 ob-btn-hint"
       >
         開始
       </button>
@@ -127,7 +127,7 @@ function DemoWelcome() {
         <div className="flex flex-col gap-2">
           <div className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-red-50 to-orange-50 border border-red-200/60 rounded-xl transition-all duration-700 ${pulse ? "ob-card-pulse" : ""}`}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#E23D28" strokeWidth="1.5"><path d="M17 11H3a1 1 0 01-1-1 8 8 0 018-8h8a1 1 0 011 1 8 8 0 01-2 5.3"/><path d="M21 10.5c.5.5 1 1.6 1 2.5a4 4 0 01-4 4H6"/><path d="M3 21h18"/><path d="M3 17h18"/></svg>
-            <div className="text-xs font-bold text-[#E23D28]">早餐部</div>
+            <div className="text-xs font-bold text-[var(--tint)]">早餐部</div>
           </div>
           <div className={`flex flex-col items-center gap-2 p-4 bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200/60 rounded-xl transition-all duration-700 ${pulse ? "ob-card-pulse" : ""}`} style={{ animationDelay: "0.3s" }}>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="1.5"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg>
@@ -159,7 +159,7 @@ function DemoMenu() {
         <span className="text-white text-[11px] font-bold">早餐部</span>
       </div>
       <div className="px-3 pt-2.5 flex gap-1">
-        <div className="px-2.5 py-0.5 bg-red-50 border border-red-200 rounded-full text-[9px] text-[#E23D28] font-bold">全部</div>
+        <div className="px-2.5 py-0.5 bg-red-50 border border-red-200 rounded-full text-[9px] text-[var(--tint)] font-bold">全部</div>
         <div className="px-2.5 py-0.5 bg-stone-100 rounded-full text-[9px] text-stone-400">主食</div>
         <div className="px-2.5 py-0.5 bg-stone-100 rounded-full text-[9px] text-stone-400">飲料</div>
       </div>
@@ -170,7 +170,7 @@ function DemoMenu() {
               <div className="text-[11px] font-bold text-stone-800">培根蛋餅</div>
               <div className="text-xs font-black text-stone-900 mt-0.5">$40</div>
             </div>
-            <button className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all duration-300 ${added ? "bg-emerald-500 text-white" : "bg-[#E23D28] text-white"}`}>
+            <button className={`px-3 py-1 rounded-lg text-[9px] font-bold transition-all duration-300 ${added ? "bg-emerald-500 text-white" : "lg-tinted"}`}>
               {added ? "已加入" : "+ 加入"}
             </button>
           </div>
@@ -181,7 +181,7 @@ function DemoMenu() {
               <div className="text-[11px] font-bold text-stone-800">總匯三明治</div>
               <div className="text-xs font-black text-stone-900 mt-0.5">$50</div>
             </div>
-            <button className="px-3 py-1 rounded-lg bg-[#E23D28] text-white text-[9px] font-bold">+ 加入</button>
+            <button className="px-3 py-1 rounded-lg lg-tinted text-[9px] font-bold">+ 加入</button>
           </div>
         </div>
         <div className="bg-white rounded-lg p-2.5 border border-stone-100">
@@ -190,7 +190,7 @@ function DemoMenu() {
               <div className="text-[11px] font-bold text-stone-800">大冰奶</div>
               <div className="text-xs font-black text-stone-900 mt-0.5">$25</div>
             </div>
-            <button className="px-3 py-1 rounded-lg bg-[#E23D28] text-white text-[9px] font-bold">+ 加入</button>
+            <button className="px-3 py-1 rounded-lg lg-tinted text-[9px] font-bold">+ 加入</button>
           </div>
         </div>
       </div>
@@ -264,14 +264,14 @@ function StepRegister({ onSuccess, onLogin }: { onSuccess: () => void; onLogin: 
         <p className="text-white/50 text-sm mb-5">僅限內湖高中師生</p>
 
         {/* Role toggle */}
-        <div className="flex gap-2 mb-5 bg-white/10 rounded-2xl p-1">
+        <div className="flex gap-2 mb-5 bg-white/10 rounded-[22px] p-1">
           {(["student", "teacher"] as const).map(r => (
             <button
               key={r}
               type="button"
               onClick={() => setRole(r)}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
-                role === r ? "bg-white text-[#E23D28] shadow-sm" : "text-white/50"
+                role === r ? "bg-white text-[var(--tint)] shadow-sm" : "text-white/50"
               }`}
             >
               {r === "student" ? "學生" : "教師"}
@@ -345,7 +345,7 @@ function StepRegister({ onSuccess, onLogin }: { onSuccess: () => void; onLogin: 
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="w-full h-14 rounded-2xl font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150 disabled:opacity-50 mt-2">
+          <button type="submit" disabled={loading} className="w-full h-14 rounded-[22px] font-bold text-lg bg-white text-[var(--tint)] shadow-xl active:scale-[0.97] transition-all duration-150 disabled:opacity-50 mt-2">
             {loading ? "註冊中..." : "註冊帳號"}
           </button>
         </form>
@@ -397,7 +397,7 @@ function StepPermissions({ onNext }: { onNext: () => void }) {
         <button
           onClick={requestLocation}
           disabled={locStatus !== "idle"}
-          className={`w-full flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 ${
+          className={`w-full flex items-center gap-4 p-5 rounded-[22px] border transition-all duration-200 ${
             locStatus === "granted"
               ? "bg-emerald-500/20 border-emerald-400/40"
               : locStatus === "denied"
@@ -427,7 +427,7 @@ function StepPermissions({ onNext }: { onNext: () => void }) {
         <button
           onClick={requestNotification}
           disabled={notifStatus !== "idle"}
-          className={`w-full flex items-center gap-4 p-5 rounded-2xl border transition-all duration-200 ${
+          className={`w-full flex items-center gap-4 p-5 rounded-[22px] border transition-all duration-200 ${
             notifStatus === "granted"
               ? "bg-emerald-500/20 border-emerald-400/40"
               : notifStatus === "denied"
@@ -534,7 +534,7 @@ function StepPersonalize({ onFinish }: { onFinish: () => void }) {
                 onClick={() => setNotify(n.value)}
                 className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
                   notify === n.value
-                    ? "bg-white text-[#E23D28] shadow-lg"
+                    ? "bg-white text-[var(--tint)] shadow-lg"
                     : "bg-white/10 text-white/50 hover:bg-white/15"
                 }`}
               >
@@ -549,7 +549,7 @@ function StepPersonalize({ onFinish }: { onFinish: () => void }) {
 
         <button
           onClick={handleFinish}
-          className="w-full h-14 rounded-2xl font-bold text-lg bg-white text-[#E23D28] shadow-xl active:scale-[0.97] transition-all duration-150"
+          className="w-full h-14 rounded-[22px] font-bold text-lg bg-white text-[var(--tint)] shadow-xl active:scale-[0.97] transition-all duration-150"
         >
           開始使用
         </button>

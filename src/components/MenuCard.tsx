@@ -2,7 +2,6 @@
 
 import { useState, useCallback } from "react";
 import { useCart } from "@/lib/cart";
-import { getDeptConfig } from "@/lib/department";
 import type { MenuItem } from "@/types";
 import { MENU_TAG_LABELS, MENU_TAG_COLORS } from "@/types";
 import { useT, useMenuTranslate } from "@/lib/i18n";
@@ -24,7 +23,6 @@ export function MenuCard({
   const qty = useCart(
     (s) => s.items.find((i) => i.menuItem.id === item.id && i.department === department)?.quantity || 0
   );
-  const cfg = getDeptConfig(department);
   const t = useT();
   const tMenu = useMenuTranslate();
   const [justAdded, setJustAdded] = useState(false);
@@ -50,38 +48,36 @@ export function MenuCard({
   }, [updateQty, item.id, qty]);
 
   return (
-    <div className={`card-premium overflow-hidden flex flex-col animate-fade-in relative ${isSoldOut ? "opacity-70" : ""}`}>
-      {/* Image (or tag-only header when no image) */}
+    <div className={`ios-card overflow-hidden flex flex-col relative ${isSoldOut ? "opacity-60" : ""}`}>
       {item.imageUrl ? (
-        <div className="relative aspect-[4/3] bg-stone-100 dark:bg-stone-800 overflow-hidden">
+        <div className="relative aspect-[4/3] m-1.5 mb-0 rounded-[20px] overflow-hidden bg-black/5 dark:bg-white/5">
           <img
             src={item.imageUrl}
             alt={tMenu(item.name)}
             loading="lazy"
-            className={`w-full h-full object-cover ${isSoldOut ? "grayscale" : ""}`}
+            decoding="async"
+            className={`w-full h-full object-cover transition-transform duration-700 ${isSoldOut ? "grayscale" : ""}`}
           />
           {tags.length > 0 && (
             <div className="absolute top-2 left-2 flex gap-1">
               {tags.map((tag) => (
-                <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold shadow-sm ${MENU_TAG_COLORS[tag]}`}>
+                <span key={tag} className={`text-[10px] px-2 py-0.5 rounded-full font-bold shadow-sm backdrop-blur-md ${MENU_TAG_COLORS[tag]}`}>
                   {MENU_TAG_LABELS[tag]}
                 </span>
               ))}
             </div>
           )}
           {isSoldOut && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-              <span className="bg-stone-900/80 text-white text-xs font-bold px-3 py-1 rounded-full">
-                {t("sold_out")}
-              </span>
+            <div className="absolute inset-0 grid place-items-center bg-black/25">
+              <span className="lg-glass-clear ios-footnote font-semibold px-3 py-1 rounded-full">{t("sold_out")}</span>
             </div>
           )}
         </div>
       ) : (
         tags.length > 0 && (
-          <div className="flex gap-1 px-3 pt-2.5">
+          <div className="flex gap-1 px-3.5 pt-3">
             {tags.map((tag) => (
-              <span key={tag} className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${MENU_TAG_COLORS[tag]}`}>
+              <span key={tag} className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${MENU_TAG_COLORS[tag]}`}>
                 {MENU_TAG_LABELS[tag]}
               </span>
             ))}
@@ -90,31 +86,22 @@ export function MenuCard({
       )}
 
       {justAdded && (
-        <div className="absolute top-2 right-2 z-10 pointer-events-none">
-          <span className="animate-added-fly inline-block bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
-            +1
-          </span>
+        <div className="absolute top-3 right-3 z-10 pointer-events-none">
+          <span className="animate-added-fly inline-block lg-tinted ios-footnote font-bold px-2 py-0.5 rounded-full">+1</span>
         </div>
       )}
 
-      <div className={`p-3 sm:p-4 flex flex-col flex-1 ${!item.imageUrl && tags.length > 0 ? "pt-1.5" : ""}`}>
-        <div className="flex items-center gap-1.5">
-          <h3 className="font-bold text-sm sm:text-base leading-tight truncate" style={{ color: 'var(--text-primary)' }}>
-            {tMenu(item.name)}
-          </h3>
-          {qty > 0 && (
-            <span className="bg-[#E23D28] text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0 animate-cart-pop">
-              {qty}
-            </span>
-          )}
-        </div>
+      <div className={`px-3.5 pt-3 pb-3.5 flex flex-col flex-1 ${!item.imageUrl && tags.length > 0 ? "pt-1.5" : ""}`}>
+        <h3 className="ios-headline lg-ink line-clamp-2">{tMenu(item.name)}</h3>
         {item.description && (
-          <p className="text-xs text-dim mt-1 line-clamp-2">{tMenu(item.description)}</p>
+          <p className="ios-footnote lg-ink-2 mt-0.5 line-clamp-2">{tMenu(item.description)}</p>
         )}
 
-        <div className="mt-auto pt-3 flex items-center justify-between gap-2">
+        <div className="mt-auto pt-3 flex items-end justify-between gap-2">
           <div className="min-w-0">
-            <span className="text-value text-xl">${item.price}</span>
+            <span className="text-[20px] font-bold lg-ink tracking-tight" style={{ fontFamily: "var(--font-rounded)" }}>
+              ${item.price}
+            </span>
             {isLowStock && (
               <span className="block text-[10px] font-bold text-red-500 dark:text-red-400 mt-0.5">
                 {t("only_left")} {item.stock} {t("units")}
@@ -123,40 +110,33 @@ export function MenuCard({
           </div>
 
           {isSoldOut ? (
-            <span className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold text-white bg-stone-400 dark:bg-stone-600 shrink-0">
-              {t("sold_out")}
-            </span>
+            <span className="lg-btn lg-btn-sm lg-thin lg-ink-2 shrink-0">{t("sold_out")}</span>
           ) : qty === 0 ? (
             <button
               onClick={handleAdd}
               aria-label={`${t("add")} ${tMenu(item.name)}`}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-white transition-all duration-150 active:scale-90 active:brightness-110 shadow-sm hover:shadow-md shrink-0 ${cfg.btnBg}`}
+              className="lg-btn lg-btn-icon lg-tinted shrink-0 !w-10 !min-h-10"
+              data-dept={department}
             >
-              <span className="flex items-center gap-1">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                {t("add")}
-              </span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
             </button>
           ) : (
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-0.5 shrink-0 lg-thin rounded-full p-0.5">
               <button
                 onClick={handleMinus}
                 aria-label={`${t("delete")} ${tMenu(item.name)}`}
-                className="w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-700 text-stone-600 dark:text-stone-300 flex items-center justify-center text-lg hover:bg-stone-200 dark:hover:bg-stone-600 active:scale-85 active:bg-stone-300 dark:active:bg-stone-500 transition-all duration-150 font-medium"
+                className="w-8 h-8 rounded-full grid place-items-center lg-ink-2 active:scale-90 transition-transform"
               >
-                −
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M5 12h14" /></svg>
               </button>
-              <span className={`w-7 text-center font-bold text-sm text-stone-800 dark:text-stone-200 ${justAdded ? "animate-cart-pop" : ""}`}>
-                {qty}
-              </span>
+              <span className={`min-w-6 text-center font-bold text-[15px] lg-ink tabular-nums ${justAdded ? "animate-cart-pop" : ""}`}>{qty}</span>
               <button
                 onClick={handleAdd}
                 aria-label={`${t("add")} ${tMenu(item.name)}`}
-                className={`w-8 h-8 rounded-full ${cfg.btnBg} text-white flex items-center justify-center text-lg active:scale-85 active:brightness-110 transition-all duration-150 font-medium`}
+                className="w-8 h-8 rounded-full grid place-items-center lg-tinted active:scale-90 transition-transform"
+                data-dept={department}
               >
-                +
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
               </button>
             </div>
           )}

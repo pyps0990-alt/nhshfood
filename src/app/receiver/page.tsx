@@ -2,6 +2,19 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
+
+async function confirmCancel(order: { id: string; orderNumber: string; totalPrice: number; paymentMethod?: string }) {
+  const paid = order.paymentMethod === "wallet" || order.paymentMethod === "ecpay";
+  const msg = paid
+    ? `確定取消訂單 #${String(order.orderNumber).slice(-4)}？\n$${order.totalPrice} 將自動退回學生的校園錢包。`
+    : `確定取消訂單 #${String(order.orderNumber).slice(-4)}？`;
+  if (!window.confirm(msg)) return;
+  try {
+    await updateOrderStatusSecure(order.id, "cancelled");
+  } catch (e) {
+    window.alert(e instanceof Error ? e.message : "取消失敗");
+  }
+}
 import { useOrders, updateOrderStatusSecure } from "@/lib/hooks";
 
 const statusLabels: Record<string, string> = {
@@ -105,14 +118,14 @@ export default function ReceiverPage() {
   const readyCount = activeOrders.filter((o) => o.status === "ready").length;
 
   return (
-    <div className="h-screen flex flex-col bg-stone-950 text-white overflow-hidden">
+    <div className="h-screen flex flex-col lg-dark-stage text-white overflow-hidden">
       {/* Notification popups — top right */}
       {notifications.length > 0 && (
         <div className="fixed top-16 right-4 z-50 flex flex-col gap-3 max-w-sm w-full">
           {notifications.map((n, idx) => (
             <div
               key={n.id}
-              className="bg-amber-500 text-stone-900 rounded-2xl p-4 shadow-2xl shadow-amber-500/30 animate-slide-in-right flex items-start gap-3"
+              className="bg-amber-500 text-stone-900 rounded-[22px] p-4 shadow-2xl shadow-amber-500/30 animate-slide-in-right flex items-start gap-3"
               style={{ animationDelay: `${idx * 0.1}s` }}
             >
               <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center shrink-0 mt-0.5">
@@ -141,13 +154,13 @@ export default function ReceiverPage() {
         </div>
       )}
 
-      <header className="flex items-center justify-between px-5 py-3 bg-stone-900 border-b border-stone-800 shrink-0">
+      <header className="flex items-center justify-between px-5 py-3 lg-smoke shrink-0">
         <div className="flex items-center gap-4">
           <Link href="/admin" className="text-stone-400 hover:text-white transition-colors p-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </Link>
-          <h1 className="text-lg font-bold tracking-tight">接單螢幕</h1>
-          <div className="flex bg-stone-800 rounded-xl p-0.5">
+          <h1 className="text-lg font-bold tracking-tight whitespace-nowrap">接單螢幕</h1>
+          <div className="flex bg-white/8 rounded-xl p-0.5">
             {(["breakfast", "lunch"] as const).map((d) => (
               <button key={d} onClick={() => setDept(d)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${dept === d ? "bg-white text-stone-900" : "text-stone-400 hover:text-white"}`}>
@@ -168,7 +181,7 @@ export default function ReceiverPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/pos" className="text-sm text-stone-400 hover:text-white transition-colors px-3 py-1.5 bg-stone-800 rounded-lg">
+          <Link href="/pos" className="text-sm text-stone-400 hover:text-white transition-colors px-3 py-1.5 bg-white/8 rounded-lg">
             POS 點餐機
           </Link>
           {/* Sound status indicator (read-only) */}
@@ -197,7 +210,7 @@ export default function ReceiverPage() {
                 : "border-emerald-500/50 shadow-lg shadow-emerald-500/10";
               return (
                 <div key={order.id}
-                  className={`bg-stone-900 border-2 rounded-2xl p-5 flex flex-col ${borderClass}`}>
+                  className={`lg-smoke border-2 rounded-[22px] p-5 flex flex-col ${borderClass}`}>
                   <div className="mb-1">
                     <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold text-white ${statusColors[order.status]}`}>
                       {statusLabels[order.status]}
@@ -233,7 +246,7 @@ export default function ReceiverPage() {
                     </div>
                   </div>
 
-                  <div className="bg-stone-800 rounded-xl p-3 mb-4 space-y-1">
+                  <div className="bg-white/8 rounded-xl p-3 mb-4 space-y-1">
                     <p className="text-xs text-stone-500 font-semibold mb-1.5">訂購項目</p>
                     {order.items.map((item: { name: string; quantity: number; price: number }, i: number) => (
                       <div key={i} className="flex justify-between text-sm">
@@ -241,7 +254,7 @@ export default function ReceiverPage() {
                         <span className="text-stone-400">${item.price * item.quantity}</span>
                       </div>
                     ))}
-                    <div className="border-t border-stone-700 mt-2 pt-2 flex justify-between font-bold text-amber-400">
+                    <div className="border-t border-white/10 mt-2 pt-2 flex justify-between font-bold text-amber-400">
                       <span>總金額</span><span>${order.totalPrice}</span>
                     </div>
                   </div>
@@ -257,7 +270,7 @@ export default function ReceiverPage() {
                         {order.status === "pending" ? "確認接單" : order.status === "confirmed" ? "標記完成" : "已取餐"}
                       </button>
                     )}
-                    <button onClick={() => updateOrderStatusSecure(order.id, "cancelled")}
+                    <button onClick={() => confirmCancel(order as Parameters<typeof confirmCancel>[0])}
                       className="px-4 py-3 rounded-xl text-sm text-red-400 bg-red-500/10 hover:bg-red-500/20 transition-all">
                       取消
                     </button>

@@ -2,12 +2,13 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useStudentAuth } from "@/lib/student-auth";
+import { useStudentAuth, useStudentAuthHydrated } from "@/lib/student-auth";
 import { BackButton } from "@/components/BackButton";
 
 export default function ProfilePage() {
   const router = useRouter();
   const { student, setStudent, logout } = useStudentAuth();
+  const hydrated = useStudentAuthHydrated();
   const [studentName, setStudentName] = useState("");
   const [email, setEmail] = useState("");
   const [className, setClassName] = useState("");
@@ -40,6 +41,7 @@ export default function ProfilePage() {
   }
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!student) {
       router.push("/login");
       return;
@@ -47,7 +49,7 @@ export default function ProfilePage() {
     setStudentName(student.studentName);
     setEmail(student.email);
     setClassName(student.className);
-  }, [student, router]);
+  }, [hydrated, student, router]);
 
   if (!student) return null;
 
@@ -64,6 +66,16 @@ export default function ProfilePage() {
       if (studentName !== student!.studentName) payload.studentName = studentName;
       if (email !== student!.email) payload.email = email;
       if (className !== student!.className) payload.className = className;
+
+      const emailChanged = email.trim().toLowerCase() !== (student!.email || "").toLowerCase();
+      if (emailChanged && !changingPassword) {
+        if (!currentPassword) {
+          setMessage({ type: "error", text: "變更 Email 需要輸入目前密碼" });
+          setSaving(false);
+          return;
+        }
+        payload.password = currentPassword;
+      }
 
       if (changingPassword) {
         if (!currentPassword) {
@@ -132,9 +144,9 @@ export default function ProfilePage() {
 
   return (
     <div className="flex-1 flex flex-col">
-      <header className="glass dark:bg-stone-900/85 border-b border-stone-200/50 dark:border-stone-800 px-5 py-4 flex items-center gap-3 sticky top-0 z-10">
+      <header data-solid="true" className="lg-nav px-5 py-4 flex items-center gap-3">
         <BackButton href="/" />
-        <h1 className="text-lg font-bold text-stone-900 dark:text-stone-100">個人設定</h1>
+        <h1 className="text-lg font-bold lg-ink">個人設定</h1>
       </header>
 
       <main className="flex-1 px-5 py-8 max-w-lg mx-auto w-full">
@@ -155,47 +167,55 @@ export default function ProfilePage() {
               </div>
               <input ref={avatarRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
             </div>
-            <p className="font-bold text-lg text-stone-900 dark:text-stone-100">{student.studentName}</p>
-            <p className="text-sm text-stone-500 dark:text-stone-400">{student.className}班 · {student.studentId}</p>
-            <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">點擊頭像更換照片</p>
+            <p className="font-bold text-lg lg-ink">{student.studentName}</p>
+            <p className="text-sm lg-ink-2">{student.className}班 · {student.studentId}</p>
+            <p className="text-xs lg-ink-3 mt-1">點擊頭像更換照片</p>
           </div>
         </div>
 
         <form onSubmit={handleSave} className="space-y-4">
           <div className="card-premium p-5 space-y-4">
-            <h2 className="font-bold text-stone-800 dark:text-stone-200">基本資料</h2>
+            <h2 className="font-bold lg-ink">基本資料</h2>
 
             <div>
-              <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">學號</label>
+              <label className="text-sm font-medium lg-ink-2 mb-1 block">學號</label>
               <input type="text" value={student.studentId} disabled
-                className="w-full px-4 py-3 bg-stone-100 dark:bg-stone-800 rounded-xl text-stone-500 dark:text-stone-400 cursor-not-allowed" />
+                className="lg-field w-full" />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">姓名</label>
+              <label className="text-sm font-medium lg-ink-2 mb-1 block">姓名</label>
               <input type="text" value={studentName} onChange={(e) => setStudentName(e.target.value)}
-                className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-[#E23D28]/20 focus:border-[#E23D28] outline-none transition-all" />
+                className="lg-field w-full" />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">班級</label>
+              <label className="text-sm font-medium lg-ink-2 mb-1 block">班級</label>
               <input type="text" value={className} onChange={(e) => setClassName(e.target.value)}
-                className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-[#E23D28]/20 focus:border-[#E23D28] outline-none transition-all" />
+                className="lg-field w-full" />
             </div>
 
             <div>
-              <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">Email</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-[#E23D28]/20 focus:border-[#E23D28] outline-none transition-all" />
+              <label className="text-sm font-medium lg-ink-2 mb-1 block">Email</label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email"
+                className="lg-field w-full" />
             </div>
 
           </div>
 
+          {!changingPassword && email.trim().toLowerCase() !== (student?.email || "").toLowerCase() && (
+            <div className="card-premium p-5 space-y-2 lg-rise">
+              <label className="text-sm font-medium lg-ink-2 block" htmlFor="reauth-pw">目前密碼（變更 Email 需要驗證）</label>
+              <input id="reauth-pw" type="password" autoComplete="current-password" value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)} placeholder="請輸入目前密碼" className="lg-field" />
+            </div>
+          )}
+
           <div className="card-premium p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="font-bold text-stone-800 dark:text-stone-200">變更密碼</h2>
+              <h2 className="font-bold lg-ink">變更密碼</h2>
               <button type="button" onClick={() => setChangingPassword(!changingPassword)}
-                className="text-sm text-[#E23D28] font-medium">
+                className="text-sm text-[var(--tint)] font-medium">
                 {changingPassword ? "取消" : "修改密碼"}
               </button>
             </div>
@@ -203,11 +223,11 @@ export default function ProfilePage() {
             {changingPassword && (
               <div className="space-y-3">
                 <div className="relative">
-                  <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">目前密碼</label>
+                  <label className="text-sm font-medium lg-ink-2 mb-1 block">目前密碼</label>
                   <input type={showCurrentPw ? "text" : "password"} value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="請輸入目前密碼"
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-[#E23D28]/20 focus:border-[#E23D28] outline-none transition-all pr-12" />
+                    className="lg-field w-full pr-12" />
                   <button type="button" onClick={() => setShowCurrentPw(!showCurrentPw)}
                     className="absolute right-3 top-9 text-stone-400 hover:text-stone-600">
                     {showCurrentPw ? (
@@ -219,10 +239,10 @@ export default function ProfilePage() {
                 </div>
 
                 <div className="relative">
-                  <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">新密碼</label>
+                  <label className="text-sm font-medium lg-ink-2 mb-1 block">新密碼</label>
                   <input type={showNewPw ? "text" : "password"} value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-[#E23D28]/20 focus:border-[#E23D28] outline-none transition-all pr-12" />
+                    className="lg-field w-full pr-12" />
                   <button type="button" onClick={() => setShowNewPw(!showNewPw)}
                     className="absolute right-3 top-9 text-stone-400 hover:text-stone-600">
                     {showNewPw ? (
@@ -234,10 +254,10 @@ export default function ProfilePage() {
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-stone-600 dark:text-stone-400 mb-1 block">確認新密碼</label>
+                  <label className="text-sm font-medium lg-ink-2 mb-1 block">確認新密碼</label>
                   <input type="password" value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-stone-900 dark:text-stone-100 focus:ring-2 focus:ring-[#E23D28]/20 focus:border-[#E23D28] outline-none transition-all" />
+                    className="lg-field w-full" />
                   {confirmPassword && newPassword !== confirmPassword && (
                     <p className="text-red-500 text-xs mt-1">密碼不一致</p>
                   )}
@@ -255,7 +275,7 @@ export default function ProfilePage() {
           )}
 
           <button type="submit" disabled={saving}
-            className="w-full bg-gradient-to-r from-[#E23D28] to-[#FF6B35] text-white rounded-2xl py-4 font-bold text-lg shadow-lg hover:shadow-xl transition-all active:scale-[0.98] disabled:opacity-50">
+            className="w-full lg-tinted rounded-[22px] py-4 font-bold text-lg transition-all active:scale-[0.98] disabled:opacity-50">
             {saving ? "儲存中..." : "儲存變更"}
           </button>
 

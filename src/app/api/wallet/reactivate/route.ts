@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
+import { auditLog } from "@/lib/security";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -20,13 +21,11 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "請先登入管理員帳號" }, { status: 401 });
-  }
+  const session = await requireAdmin();
+  if (session instanceof NextResponse) return session;
 
   const ip = getClientIp(req);
-  const { allowed } = rateLimit(ip, 10, 60 * 1000);
+  const { allowed } = rateLimit(`reactivate:${session.username}:${ip}`, 10, 60 * 1000);
   if (!allowed) {
     return NextResponse.json({ error: "請求太頻繁，請稍後再試" }, { status: 429 });
   }
@@ -78,6 +77,7 @@ export async function POST(req: NextRequest) {
       });
       return { transactionId: txRef.id, studentId, reactivatedAt: nowIso };
     });
+    await auditLog({ actor: session.username, action: "wallet.reactivate", target: studentId, detail: result as unknown as Record<string, unknown>, ip });
     return NextResponse.json(result);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "";

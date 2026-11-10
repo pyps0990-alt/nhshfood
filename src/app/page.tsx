@@ -2,19 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { OrderLookup } from "@/components/OrderLookup";
+import { TabBar } from "@/components/glass/TabBar";
 import { useStudentAuth } from "@/lib/student-auth";
 import { useT } from "@/lib/i18n";
-import { IconSettings, IconWallet, IconLogOut, IconChevronRight, IconSchool, IconShoppingBag } from "@/components/Icons";
+import { IconWallet, IconChevronRight, IconSchool, IconShoppingBag } from "@/components/Icons";
+
+const ACTIVE_LABEL: Record<string, string> = { awaiting_payment: "等待付款", pending: "店家確認中", confirmed: "準備中", ready: "可以取餐了" };
 import { useCart } from "@/lib/cart";
 import { getDeptConfig } from "@/lib/department";
 import { prefetchMenu, preloadLocation } from "@/lib/hooks";
 import { useExitAnimation } from "@/lib/useExitAnimation";
 import { useEffect, useState, useCallback } from "react";
+import { taipeiHour } from "@/lib/time";
 
 export default function Home() {
   const router = useRouter();
-  const { student, logout } = useStudentAuth();
+  const { student } = useStudentAuth();
+  const [activeOrders, setActiveOrders] = useState<{ id: string; orderNumber: string; status: string }[]>([]);
   const t = useT();
   const cartItems = useCart((s) => s.items);
   const [balance, setBalance] = useState<number | null>(null);
@@ -23,6 +27,11 @@ export default function Home() {
 
   const fetchBalance = useCallback(async () => {
     if (!student) return;
+    fetch("/api/orders/mine", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((list: { id: string; orderNumber: string; status: string }[]) =>
+        setActiveOrders(list.filter((o) => o.status in ACTIVE_LABEL)))
+      .catch(() => {});
     try {
       const res = await fetch(`/api/wallet?studentId=${encodeURIComponent(student.studentId)}`);
       if (res.ok) {
@@ -56,133 +65,117 @@ export default function Home() {
     router.push(`/${dept}`);
   }
 
+  const hour = taipeiHour(new Date());
+  const greeting = hour < 11 ? "早安" : hour < 14 ? "午安" : hour < 18 ? "下午好" : "晚安";
+  const name = student ? student.displayName || student.studentName : null;
+
   return (
-    <div className="flex-1 flex flex-col">
-      <header className="sticky top-0 z-20 glass dark:bg-stone-900/85 border-b border-stone-200/50 dark:border-stone-800 px-4 py-2.5">
-        {student ? (
-          <div className="flex items-center justify-between max-w-lg mx-auto">
-            <Link href="/settings" className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0">
-                {(student.displayName || student.studentName).charAt(0)}
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-stone-800 dark:text-stone-200 truncate">{student.displayName || student.studentName}</p>
-                <p className="text-[11px] text-stone-400 truncate">{student.className} · {student.studentId}</p>
-              </div>
+    <div className="flex-1 flex flex-col has-tabbar">
+      {/* Top bar: glass controls float over content (no bar background at rest) */}
+      <header className="lg-nav" data-scrolled="false">
+        <div className="max-w-lg mx-auto h-[56px] px-4 flex items-center justify-between gap-2">
+          {student ? (
+            <Link href="/profile" aria-label="個人資料" className="lg-glass lg-glass-press w-11 h-11 rounded-full grid place-items-center shrink-0">
+              <span className="w-9 h-9 rounded-full lg-tinted grid place-items-center text-[15px] font-semibold">{(name || "?").charAt(0)}</span>
             </Link>
-            <div className="flex items-center gap-1 shrink-0">
-              <Link href="/wallet" className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-semibold px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
-                <IconWallet size={14} />
-                {balance !== null ? (
-                  <span className="font-mono font-bold">${balance}</span>
-                ) : (
-                  <span>{t("wallet")}</span>
-                )}
-              </Link>
-              <Link href="/settings" className="p-2 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-                <IconSettings size={16} />
-              </Link>
-              <button onClick={logout} className="p-2 rounded-lg text-stone-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
-                <IconLogOut size={16} />
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-between max-w-lg mx-auto">
-            <Link href="/login" className="flex items-center gap-2">
-              <IconSchool className="text-stone-500" />
-              <span className="text-sm font-semibold text-stone-700 dark:text-stone-300">{t("login_to_order")}</span>
-              <IconChevronRight className="text-[#E23D28]" />
+          ) : (
+            <Link href="/login" className="lg-btn lg-btn-sm lg-glass lg-ink">
+              <IconSchool size={16} />
+              {t("login_to_order")}
             </Link>
-            <Link href="/settings" className="p-2 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors">
-              <IconSettings size={16} />
+          )}
+          {student && (
+            <Link href="/wallet" className="lg-btn lg-btn-sm lg-glass lg-ink" aria-label={`錢包餘額 ${balance ?? ""}`}>
+              <IconWallet size={16} className="lg-brand" />
+              <span className="tabular-nums">{balance !== null ? `$${balance}` : t("wallet")}</span>
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
-      <main className="flex-1 flex flex-col px-6 py-8 max-w-lg mx-auto w-full">
-        <h1 className="text-2xl font-black text-value mb-6">{t("app_name")}</h1>
-
-        {/* Department buttons — vertical stack, large cards */}
-        <div className="flex flex-col gap-3">
-          <button onClick={() => handleDeptClick("breakfast")}
-            className="relative flex flex-col items-center gap-3 p-8 bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/30 dark:to-orange-950/20 border border-red-200/60 dark:border-red-800/40 rounded-2xl hover:border-red-300 dark:hover:border-red-700 active:scale-[0.98] transition-all duration-150">
-            {!student && (
-              <span className="absolute top-3 right-3 text-[10px] font-bold bg-stone-700 dark:bg-stone-600 text-white px-2 py-0.5 rounded-md">需登入</span>
-            )}
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#E23D28" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 11H3a1 1 0 01-1-1 8 8 0 018-8h8a1 1 0 011 1 8 8 0 01-2 5.3"/><path d="M21 10.5c.5.5 1 1.6 1 2.5a4 4 0 01-4 4H6"/><path d="M3 21h18"/><path d="M3 17h18"/>
-            </svg>
-            <div className="text-center">
-              <span className="text-xl font-bold text-[#E23D28]">{t("breakfast")}</span>
-              <p className="text-sm text-stone-400 dark:text-stone-500 mt-0.5">{t("breakfast_hours")}</p>
-            </div>
-          </button>
-
-          <button onClick={() => handleDeptClick("lunch")}
-            className="relative flex flex-col items-center gap-3 p-8 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950/20 dark:to-amber-950/20 border border-orange-200/60 dark:border-orange-800/40 rounded-2xl hover:border-orange-300 dark:hover:border-orange-700 active:scale-[0.98] transition-all duration-150">
-            {!student && (
-              <span className="absolute top-3 right-3 text-[10px] font-bold bg-stone-700 dark:bg-stone-600 text-white px-2 py-0.5 rounded-md">需登入</span>
-            )}
-            <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#FF6B35" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/>
-            </svg>
-            <div className="text-center">
-              <span className="text-xl font-bold text-[#FF6B35]">{t("lunch")}</span>
-              <p className="text-sm text-stone-400 dark:text-stone-500 mt-0.5">{t("lunch_hours")}</p>
-            </div>
-          </button>
+      <main className="flex-1 flex flex-col px-4 pt-1 max-w-lg mx-auto w-full">
+        <div className="px-1 lg-rise">
+          <p className="ios-subhead lg-ink-2">{name ? `${greeting}，${name}` : greeting}</p>
+          <h1 className="ios-large-title lg-ink">{t("app_name")}</h1>
         </div>
 
-        {/* Cart — always visible */}
-        <button
-          onClick={() => {
-            if (cartCount === 0) return;
-            if (!student) { router.push("/login"); return; }
-            if (cartDepts.length > 1) { setShowDeptPicker(true); return; }
-            router.push(`/${cartDepts[0]}?cart=1`);
-          }}
-          className={`mt-4 flex items-center justify-between rounded-2xl px-5 py-3.5 font-semibold shadow-md active:scale-[0.98] transition-all duration-150 ${
-            cartCount > 0
-              ? "bg-gradient-to-r from-[#E23D28] to-[#FF6B35] text-white"
-              : "bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 shadow-none cursor-default"
-          }`}
-        >
-          <span className="flex items-center gap-2.5">
-            <IconShoppingBag size={16} />
-            <span>{t("cart")}</span>
-            {cartDepts.length > 1 && (
-              <span className={cartCount > 0 ? "text-white/70 text-xs" : "text-stone-400 text-xs"}>
-                ({cartDepts.map(d => t(d === "breakfast" ? "breakfast" : "lunch")).join(" + ")})
+        {activeOrders.length > 0 && (
+          <Link href={activeOrders.length === 1 ? `/order/${activeOrders[0].id}` : "/orders"} className="ios-card mt-5 lg-row active:scale-[0.985] transition-transform lg-rise">
+            <span className="w-10 h-10 rounded-full grid place-items-center shrink-0" style={{ background: "rgba(255,149,0,.15)", color: "var(--sys-orange)" }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block ios-headline lg-ink">
+                {activeOrders.length === 1 ? `訂單 #${String(activeOrders[0].orderNumber).slice(-4)}` : `${activeOrders.length} 筆進行中的訂單`}
               </span>
-            )}
-          </span>
-          <span className={`rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold ${
-            cartCount > 0 ? "bg-white/20" : "bg-stone-200 dark:bg-stone-700"
-          }`}>{cartCount}</span>
-        </button>
+              <span className="block ios-footnote lg-ink-2">
+                {activeOrders.length === 1 ? ACTIVE_LABEL[activeOrders[0].status] : "點擊查看狀態"}
+              </span>
+            </span>
+            <IconChevronRight size={16} className="lg-ink-3" />
+          </Link>
+        )}
 
-        {/* Order lookup — secondary action, pushed down */}
-        <div className="mt-auto pt-8">
-          <OrderLookup />
+        <p className="ios-section-header mt-6">點餐</p>
+        <div className="lg-list">
+          {([
+            { key: "breakfast", color: "#E23D28", icon: <path d="M17 11H3a1 1 0 01-1-1 8 8 0 018-8h8a1 1 0 011 1 8 8 0 01-2 5.3M21 10.5c.5.5 1 1.6 1 2.5a4 4 0 01-4 4H6M3 21h18M3 17h18" /> },
+            { key: "lunch", color: "#F2602A", icon: <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 002-2V2M7 2v20M21 15V2a5 5 0 00-5 5v6c0 1.1.9 2 2 2h3zm0 0v7" /> },
+          ] as const).map((d) => (
+            <button key={d.key} onClick={() => handleDeptClick(d.key)} className="lg-row w-full text-left !min-h-[76px] active:bg-[var(--fill-4)] transition-colors">
+              <span className="w-12 h-12 rounded-[14px] grid place-items-center shrink-0 text-white" style={{ background: d.color }}>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">{d.icon}</svg>
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block ios-title3 lg-ink">{t(d.key)}</span>
+                <span className="block ios-subhead lg-ink-2">{t(`${d.key}_hours`)}</span>
+              </span>
+              {!student && <span className="ios-footnote lg-ink-3">需登入</span>}
+              <IconChevronRight size={16} className="lg-ink-3" />
+            </button>
+          ))}
         </div>
 
-        <footer className="text-center text-xs text-stone-400 dark:text-stone-600 pt-6 pb-2">
-          &copy; 2025 {t("copyright")}
+        {cartCount > 0 && (
+          <>
+            <p className="ios-section-header mt-6">購物車</p>
+            <button
+              onClick={() => {
+                if (!student) { router.push("/login"); return; }
+                if (cartDepts.length > 1) { setShowDeptPicker(true); return; }
+                router.push(`/${cartDepts[0]}?cart=1`);
+              }}
+              className="ios-card lg-row w-full text-left active:scale-[0.985] transition-transform"
+            >
+              <span className="w-10 h-10 rounded-full grid place-items-center shrink-0 lg-thin lg-brand"><IconShoppingBag size={19} /></span>
+              <span className="flex-1 min-w-0">
+                <span className="block ios-headline lg-ink">{cartCount} 件待結帳</span>
+                <span className="block ios-footnote lg-ink-2">{cartDepts.map((d) => t(d === "breakfast" ? "breakfast" : "lunch")).join("、")}</span>
+              </span>
+              <IconChevronRight size={16} className="lg-ink-3" />
+            </button>
+          </>
+        )}
+
+        <footer className="text-center ios-caption lg-ink-3 pt-10 pb-4">
+          &copy; {new Date().getFullYear()} {t("copyright")}
         </footer>
       </main>
 
+      <TabBar />
+
       {deptPickerMounted && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowDeptPicker(false)}>
-          <div className={`absolute inset-0 bg-black/40 backdrop-blur-sm ${deptPickerClosing ? "animate-backdrop-out" : "animate-backdrop-in"}`} />
+          <div className={`absolute inset-0 bg-black/20 ${deptPickerClosing ? "animate-backdrop-out" : "animate-backdrop-in"}`} />
           <div
-            className={`relative w-full max-w-sm mx-4 mb-4 sm:mb-0 bg-white dark:bg-stone-900 rounded-2xl shadow-2xl overflow-hidden ${deptPickerClosing ? "animate-modal-out" : "animate-modal-in"}`}
+            className={`relative w-full max-w-sm mx-2 mb-2 sm:mb-0 lg-glass rounded-[var(--r-sheet)] overflow-hidden ${deptPickerClosing ? "animate-modal-out" : "lg-materialize"}`}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="選擇要查看的購物車"
           >
-            <div className="p-5 pb-2">
-              <h3 className="text-base font-bold text-stone-800 dark:text-stone-200">選擇要查看的購物車</h3>
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-1">兩個部門都有品項，請選擇一個</p>
+            <div className="px-5 pt-5 pb-2">
+              <h3 className="text-[17px] font-bold lg-ink">選擇要查看的購物車</h3>
+              <p className="text-[13px] lg-ink-3 mt-1">兩個部門都有品項，請選擇一個</p>
             </div>
             <div className="p-3 space-y-2">
               {cartDepts.map((dept) => {
@@ -193,27 +186,20 @@ export default function Home() {
                   <button
                     key={dept}
                     onClick={() => { setShowDeptPicker(false); router.push(`/${dept}?cart=1`); }}
-                    className={`w-full flex items-center justify-between gap-3 p-4 rounded-xl border-2 transition-all duration-150 active:scale-[0.98] ${
-                      dept === "breakfast"
-                        ? "border-red-200/70 dark:border-red-800/40 bg-red-50/60 dark:bg-red-950/20 hover:border-red-300 dark:hover:border-red-700"
-                        : "border-orange-200/70 dark:border-orange-800/40 bg-orange-50/60 dark:bg-orange-950/20 hover:border-orange-300 dark:hover:border-orange-700"
-                    }`}
+                    className="w-full flex items-center justify-between gap-3 p-4 rounded-[24px] bg-[var(--sys-bg-2)] active:scale-[0.98] transition-transform"
                   >
                     <span className={`font-bold ${cfg.btnText}`}>{cfg.label}</span>
-                    <span className="flex items-center gap-2 text-sm text-stone-500 dark:text-stone-400">
-                      <span>{deptCount} 件・${deptTotal}</span>
+                    <span className="flex items-center gap-2 text-sm lg-ink-2">
+                      <span className="tabular-nums">{deptCount} 件・${deptTotal}</span>
                       <IconChevronRight size={14} className={cfg.btnText} />
                     </span>
                   </button>
                 );
               })}
             </div>
-            <button
-              onClick={() => setShowDeptPicker(false)}
-              className="w-full py-3.5 text-stone-500 dark:text-stone-400 text-sm font-medium hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors border-t border-stone-100 dark:border-stone-800"
-            >
-              取消
-            </button>
+            <div className="p-3 pt-0">
+              <button onClick={() => setShowDeptPicker(false)} className="lg-btn lg-btn-lg w-full bg-[var(--sys-bg-2)] lg-ink">取消</button>
+            </div>
           </div>
         </div>
       )}

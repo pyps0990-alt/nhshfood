@@ -3,21 +3,17 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getSession, getStudentSession } from "@/lib/auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
+import { csvEscape } from "@/lib/security";
 
 const querySchema = z.object({
   studentId: z.string().min(1).max(20).trim(),
 });
 
-function csvEscape(v: unknown): string {
-  const s = v == null ? "" : String(v);
-  if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
 const typeLabel: Record<string, string> = {
   top_up: "儲值",
   payment: "付款",
   refund: "退款",
+  admin_note: "備註",
 };
 const methodLabel: Record<string, string> = {
   cash: "現金",
@@ -25,11 +21,14 @@ const methodLabel: Record<string, string> = {
   admin_adjustment: "管理員調整",
   wallet: "錢包扣款",
   cash_refund: "現金退費",
+  ecpay: "綠界線上儲值",
+  ecpay_to_wallet: "線上付款退回錢包",
+  reactivate: "重新啟用",
 };
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed } = rateLimit(ip, 30, 60 * 1000);
+  const { allowed } = rateLimit(`wallet-tx:${ip}`, 300, 60 * 1000);
   if (!allowed) {
     return NextResponse.json({ error: "請求太頻繁，請稍後再試" }, { status: 429 });
   }

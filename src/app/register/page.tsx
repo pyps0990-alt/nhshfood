@@ -128,24 +128,24 @@ export default function RegisterPage() {
     <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-sm animate-fade-in">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-200/50 dark:shadow-red-900/30">
+          <div className="w-16 h-16 bg-gradient-to-br from-[#E23D28] to-[#FF6B35] rounded-[22px] flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-200/50 dark:shadow-red-900/30">
             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-stone-900 dark:text-stone-100">帳號註冊</h1>
-          <p className="text-stone-500 dark:text-stone-400 text-sm mt-2">僅限內湖高中師生</p>
+          <h1 className="text-2xl font-bold lg-ink">帳號註冊</h1>
+          <p className="lg-ink-2 text-sm mt-2">僅限內湖高中師生</p>
         </div>
 
         {/* Role toggle */}
-        <div className="flex gap-2 mb-6 bg-stone-100 dark:bg-stone-800 rounded-2xl p-1">
+        <div className="flex gap-2 mb-6 lg-thin rounded-[22px] p-1">
           <button
             type="button"
             onClick={() => setRole("student")}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
               role === "student"
-                ? "bg-white dark:bg-stone-700 text-[#E23D28] shadow-sm"
-                : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300"
+                ? "bg-white dark:bg-stone-700 text-[var(--tint)] shadow-sm"
+                : "lg-ink-2 hover:text-stone-700 dark:hover:text-stone-300"
             }`}
           >
             學生
@@ -155,8 +155,8 @@ export default function RegisterPage() {
             onClick={() => setRole("teacher")}
             className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
               role === "teacher"
-                ? "bg-white dark:bg-stone-700 text-[#E23D28] shadow-sm"
-                : "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300"
+                ? "bg-white dark:bg-stone-700 text-[var(--tint)] shadow-sm"
+                : "lg-ink-2 hover:text-stone-700 dark:hover:text-stone-300"
             }`}
           >
             教師
@@ -165,7 +165,7 @@ export default function RegisterPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">
+            <label className="block text-sm font-semibold lg-ink mb-1.5">
               {role === "teacher" ? "教師編號" : "學號"} *
             </label>
             <input
@@ -173,12 +173,12 @@ export default function RegisterPage() {
               onChange={(e) => setStudentId(e.target.value)}
               placeholder={role === "teacher" ? "輸入教師編號" : "輸入學號"}
               required
-              className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+              className="lg-field w-full text-sm font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">密碼 *</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">密碼 *</label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
@@ -186,7 +186,7 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="輸入密碼"
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all pr-11"
+                className="lg-field w-full text-sm font-medium pr-11"
               />
               <button
                 type="button"
@@ -200,10 +200,10 @@ export default function RegisterPage() {
             <div className="mt-2 space-y-1">
               {pwChecks.map((c) => (
                 <div key={c.label} className="flex items-center gap-1.5">
-                  <span className={`text-xs ${c.pass ? "text-green-500" : "text-stone-300 dark:text-stone-600"}`}>
+                  <span className={`text-xs ${c.pass ? "text-green-500" : "lg-ink-3"}`}>
                     {c.pass ? "✓" : "○"}
                   </span>
-                  <span className={`text-xs ${c.pass ? "text-green-600 dark:text-green-400" : "text-stone-400 dark:text-stone-500"}`}>
+                  <span className={`text-xs ${c.pass ? "text-green-600 dark:text-green-400" : "lg-ink-3"}`}>
                     {c.label}
                   </span>
                 </div>
@@ -231,7 +231,7 @@ export default function RegisterPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">確認密碼 *</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">確認密碼 *</label>
             <div className="relative">
               <input
                 type={showConfirm ? "text" : "password"}
@@ -239,7 +239,7 @@ export default function RegisterPage() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="再次輸入密碼"
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all pr-11"
+                className="lg-field w-full text-sm font-medium pr-11"
               />
               <button
                 type="button"
@@ -256,48 +256,48 @@ export default function RegisterPage() {
 
           {role === "student" && (
             <div>
-              <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">班級 *</label>
+              <label className="block text-sm font-semibold lg-ink mb-1.5">班級 *</label>
               <input
                 value={className}
                 onChange={(e) => setClassName(e.target.value)}
                 placeholder="例：101"
                 required
-                className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+                className="lg-field w-full text-sm font-medium"
               />
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">姓名 *</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">姓名 *</label>
             <input
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
               placeholder="真實姓名"
               required
-              className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+              className="lg-field w-full text-sm font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">暱稱</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">暱稱</label>
             <input
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="App 內顯示的名稱（選填）"
               maxLength={30}
-              className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+              className="lg-field w-full text-sm font-medium"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-stone-700 dark:text-stone-300 mb-1.5">學校 Email *</label>
+            <label className="block text-sm font-semibold lg-ink mb-1.5">學校 Email *</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="username@nhsh.tp.edu.tw"
               required
-              className="w-full px-4 py-3 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-2xl text-sm font-medium text-stone-900 dark:text-stone-100 placeholder:text-stone-400 dark:placeholder:text-stone-500 focus:outline-none focus:ring-2 focus:ring-[#E23D28]/30 focus:border-[#E23D28] transition-all"
+              className="lg-field w-full text-sm font-medium"
             />
             {email && !email.endsWith("@nhsh.tp.edu.tw") && email.includes("@") && (
               <p className="text-xs text-amber-500 mt-1">僅限學校 Email（@nhsh.tp.edu.tw）</p>
@@ -313,7 +313,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading || success}
-            className={`w-full rounded-2xl px-6 py-3.5 font-bold shadow-lg shadow-red-200/50 dark:shadow-red-900/30 hover:shadow-xl transition-colors duration-300 active:scale-[0.98] disabled:opacity-90 flex items-center justify-center gap-2 text-white ${success ? "bg-emerald-500" : "bg-[#E23D28] hover:bg-[#c9321f]"}`}
+            className={`lg-btn lg-btn-lg w-full ${success ? "bg-emerald-500 text-white" : "lg-tinted"}`}
           >
             {success ? (
               <>
@@ -334,9 +334,9 @@ export default function RegisterPage() {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-sm text-stone-500 dark:text-stone-400">
+          <p className="text-sm lg-ink-2">
             已有帳號？
-            <Link href="/login" className="text-[#E23D28] font-semibold ml-1 hover:underline">
+            <Link href="/login" className="text-[var(--tint)] font-semibold ml-1 hover:underline">
               登入
             </Link>
           </p>
