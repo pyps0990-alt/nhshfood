@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import { rateLimit, durableRateLimit, resetDurableRateLimit, getClientIp } from "@/lib/rate-limit";
 import { createStudentToken, studentCookieOptions, STUDENT_COOKIE_NAME } from "@/lib/auth";
 
 const loginSchema = z.object({
@@ -13,7 +13,7 @@ const loginSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     const ip = getClientIp(req);
-    const rl = rateLimit(`login:${ip}`, 10, 5 * 60 * 1000);
+    const rl = rateLimit(`student-login:${ip}`, 60, 5 * 60 * 1000);
     if (!rl.allowed) {
       return NextResponse.json({ error: "登入嘗試過於頻繁，請 5 分鐘後再試" }, { status: 429 });
     }
@@ -26,21 +26,21 @@ export async function POST(req: NextRequest) {
 
     const { studentId, password } = parsed.data;
 
-    const perAccountRl = rateLimit(`login:acct:${studentId}`, 5, 5 * 60 * 1000);
-    if (!perAccountRl.allowed) {
-      return NextResponse.json({ error: "此帳號登入嘗試過於頻繁，請稍後再試" }, { status: 429 });
+    // Durable per-account limit: shared across all serverless instances so
+    // a password can't be brute-forced by spreading requests out.
+    const acctKey = `student-login:${studentId}`;
+    const perAccount = await durableRateLimit(acctKey, 8, 15 * 60 * 1000);
+    if (!perAccount.allowed) {
+      return NextResponse.json({ error: "此帳號登入嘗試過於頻繁，請 15 分鐘後再試" }, { status: 429 });
     }
 
     const doc = await adminDb.collection("students").doc(studentId).get();
-    if (!doc.exists) {
+    const data = doc.exists ? doc.data()! : null;
+    const valid = !!data?.passwordHash && (await bcrypt.compare(password, data.passwordHash));
+    if (!data || !valid) {
       return NextResponse.json({ error: "學號或密碼錯誤" }, { status: 401 });
     }
-
-    const data = doc.data()!;
-    const valid = await bcrypt.compare(password, data.passwordHash);
-    if (!valid) {
-      return NextResponse.json({ error: "學號或密碼錯誤" }, { status: 401 });
-    }
+    await resetDurableRateLimit(acctKey);
 
     const res = NextResponse.json({
       id: doc.id,

@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/auth";
+import { taipeiDaysAgo, taipeiIsoDate, taipeiHour } from "@/lib/time";
+
+// Orders that never became real sales (cancelled, or online payment never completed).
+const NON_REVENUE = new Set(["cancelled", "awaiting_payment", "payment_failed"]);
 
 export async function GET(req: NextRequest) {
-  const jar = await cookies();
-  if (!jar.get("admin_token")) {
-    return NextResponse.json({ error: "未授權" }, { status: 401 });
-  }
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
 
   const { searchParams } = req.nextUrl;
   const range = searchParams.get("range") || "7d";
   const dept = searchParams.get("dept") || "all";
 
-  const now = new Date();
-  let startDate: Date;
-  switch (range) {
-    case "1d":
-      startDate = new Date(now);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case "7d":
-      startDate = new Date(now.getTime() - 7 * 86400000);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case "30d":
-      startDate = new Date(now.getTime() - 30 * 86400000);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    case "90d":
-      startDate = new Date(now.getTime() - 90 * 86400000);
-      startDate.setHours(0, 0, 0, 0);
-      break;
-    default:
-      startDate = new Date(now.getTime() - 7 * 86400000);
-      startDate.setHours(0, 0, 0, 0);
-  }
+  const RANGE_DAYS: Record<string, number> = { "1d": 0, "7d": 7, "30d": 30, "90d": 90 };
+  const startDate = taipeiDaysAgo(RANGE_DAYS[range] ?? 7);
 
   try {
     const snap = await adminDb
@@ -55,7 +36,9 @@ export async function GET(req: NextRequest) {
       items?: { name: string; quantity: number; price: number; menuItemId: string }[];
     }
 
-    let orders: OrderDoc[] = snap.docs.map((d) => d.data() as OrderDoc);
+    let orders: OrderDoc[] = snap.docs
+      .map((d) => d.data() as OrderDoc)
+      .filter((o) => o.status !== "awaiting_payment" && o.status !== "payment_failed");
 
     if (dept !== "all") {
       orders = orders.filter((o) => o.department === dept);
@@ -75,15 +58,14 @@ export async function GET(req: NextRequest) {
     const totalRevenue = orders
       .filter((o) => o.status !== "cancelled")
       .reduce((s, o) => s + (o.totalPrice || 0), 0);
-    const avgOrderPrice = completedOrders > 0
-      ? Math.round(totalRevenue / (totalOrders - cancelledOrders))
-      : 0;
+    const paidOrders = totalOrders - cancelledOrders;
+    const avgOrderPrice = paidOrders > 0 ? Math.round(totalRevenue / paidOrders) : 0;
 
     // 2. Daily revenue trend
     const dailyMap = new Map<string, { revenue: number; orders: number }>();
     for (const o of orders) {
       if (o.status === "cancelled") continue;
-      const dateStr = getDate(o).toISOString().split("T")[0];
+      const dateStr = taipeiIsoDate(getDate(o));
       const entry = dailyMap.get(dateStr) || { revenue: 0, orders: 0 };
       entry.revenue += o.totalPrice || 0;
       entry.orders += 1;
@@ -97,7 +79,7 @@ export async function GET(req: NextRequest) {
     const hourly = new Array(24).fill(0);
     for (const o of orders) {
       if (o.status === "cancelled") continue;
-      hourly[getDate(o).getHours()] += 1;
+      hourly[taipeiHour(getDate(o))] += 1;
     }
 
     // 4. Top items
@@ -177,7 +159,7 @@ export async function GET(req: NextRequest) {
       if (ready && created && ready > created) {
         const total = (ready - created) / 60000;
         prepTimes.totalMin.push(total);
-        const hour = new Date(created).getHours();
+        const hour = taipeiHour(new Date(created));
         if (!prepTimes.byHour[hour]) prepTimes.byHour[hour] = [];
         prepTimes.byHour[hour].push(total);
       }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
+import { auditLog, secureDigits } from "@/lib/security";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -25,21 +26,12 @@ const closeSchema = z.object({
   reason: z.string().max(200).optional(),
 });
 
-function generateRefundCode(): string {
-  // Six digits, zero-padded. Uniqueness is enforced by including the
-  // transaction ID alongside; this is a human-friendly counter for the
-  // cashier, not a secret.
-  return String(Math.floor(100000 + Math.random() * 900000));
-}
-
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "請先登入管理員帳號" }, { status: 401 });
-  }
+  const session = await requireAdmin();
+  if (session instanceof NextResponse) return session;
 
   const ip = getClientIp(req);
-  const { allowed } = rateLimit(ip, 10, 60 * 1000);
+  const { allowed } = rateLimit(`close:${session.username}:${ip}`, 10, 60 * 1000);
   if (!allowed) {
     return NextResponse.json({ error: "請求太頻繁，請稍後再試" }, { status: 429 });
   }
@@ -77,7 +69,7 @@ export async function POST(req: NextRequest) {
         throw new Error("ALREADY_ZERO");
       }
 
-      const refundCode = generateRefundCode();
+      const refundCode = secureDigits(6);
       const nowIso = new Date().toISOString();
 
       const txRef = adminDb.collection("wallet_transactions").doc();
@@ -105,6 +97,7 @@ export async function POST(req: NextRequest) {
       };
     });
 
+    await auditLog({ actor: session.username, action: "wallet.close", target: studentId, detail: result as unknown as Record<string, unknown>, ip });
     return NextResponse.json(result);
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "";

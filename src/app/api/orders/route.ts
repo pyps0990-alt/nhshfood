@@ -1,342 +1,167 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { adminDb } from "@/lib/firebase-admin";
-import { FieldValue } from "firebase-admin/firestore";
 import { rateLimit, getClientIp, acquireConcurrentSlot, releaseConcurrentSlot } from "@/lib/rate-limit";
 import { orderLimiter } from "@/lib/request-queue";
 import { orderCircuitBreaker } from "@/lib/circuit-breaker";
 import { isWithinSchool } from "@/lib/geo";
-import { z } from "zod";
-import { sendOrderNotification } from "@/lib/mailer";
-import { getStudentSession } from "@/lib/auth";
+import { getSession, getStudentSession, requireAdmin } from "@/lib/auth";
+import { createOrder, expireStalePaymentOrders, OrderError } from "@/lib/orders";
+import { notifyOrderStatus } from "@/lib/order-notify";
+import { createOrderPayment, onlinePaymentEnabled } from "@/lib/payments/service";
+import { taipeiStartOfDay } from "@/lib/time";
 
 const createOrderSchema = z.object({
-  studentId: z.string().min(1).max(20).trim(),
+  // Identity fields from the client are ignored; kept optional for old clients.
+  studentId: z.string().max(20).optional(),
   studentName: z.string().max(50).nullable().optional(),
   className: z.string().max(30).nullable().optional(),
   department: z.enum(["breakfast", "lunch"]),
   note: z.string().max(200).nullable().optional(),
-  paymentMethod: z.enum(["cash", "wallet"]).default("cash"),
+  paymentMethod: z.enum(["cash", "wallet", "ecpay"]).default("cash"),
   pickupDate: z.string().max(20).nullable().optional(),
   pickupTime: z.string().max(20).nullable().optional(),
+  idempotencyKey: z.string().regex(/^[A-Za-z0-9-]{8,64}$/).nullable().optional(),
+  pos: z.boolean().optional(),
   items: z
     .array(
       z.object({
-        menuItemId: z.string().min(1).max(50),
-        name: z.string().min(1).max(100),
-        quantity: z.number().int().min(1).max(999),
-        price: z.number().int().min(0).max(10000),
+        menuItemId: z.string().regex(/^[A-Za-z0-9]{1,50}$/),
+        // name/price from the client are ignored; server uses the menu.
+        name: z.string().max(100).optional(),
+        quantity: z.number().int().min(1).max(20),
+        price: z.number().optional(),
       })
     )
     .min(1)
     .max(30),
-  coords: z
-    .object({
-      lat: z.number().gte(-90).lte(90),
-      lng: z.number().gte(-180).lte(180),
-    })
-    .nullable()
-    .optional(),
+  coords: z.object({ lat: z.number().gte(-90).lte(90), lng: z.number().gte(-180).lte(180) }).nullable().optional(),
 });
 
-export async function POST(req: NextRequest) {
-  // Circuit breaker: fail fast if Firestore is down
-  if (!orderCircuitBreaker.canRequest()) {
-    return NextResponse.json(
-      { error: "系統忙碌中，請稍後再試" },
-      { status: 503 }
-    );
-  }
+function errorResponse(err: unknown) {
+  if (err instanceof OrderError) return NextResponse.json({ error: err.message, code: err.code }, { status: err.status });
+  return null;
+}
 
-  // Global concurrent request limit
+export async function POST(req: NextRequest) {
+  if (!orderCircuitBreaker.canRequest()) {
+    return NextResponse.json({ error: "系統忙碌中，請稍後再試" }, { status: 503 });
+  }
   if (!acquireConcurrentSlot()) {
-    return NextResponse.json(
-      { error: "系統忙碌中，請稍後再試" },
-      { status: 503 }
-    );
+    return NextResponse.json({ error: "系統忙碌中，請稍後再試" }, { status: 503 });
   }
 
   try {
-    // Rate limit: max 5 orders per IP per 5 minutes
-    const ip = getClientIp(req);
-    const { allowed, remaining } = rateLimit(ip, 5, 5 * 60 * 1000);
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "訂單送出太頻繁，請稍後再試" },
-        {
-          status: 429,
-          headers: { "X-RateLimit-Remaining": String(remaining) },
-        }
-      );
-    }
-
-    // Identity must come from the session cookie, NOT the request body.
-    // Trusting body.studentId would let anyone place orders as anyone else
-    // via a simple localStorage edit + cash payment.
-    const session = await getStudentSession();
-    if (!session) {
-      return NextResponse.json({ error: "請先登入" }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const parsed = createOrderSchema.safeParse(body);
+    const parsed = createOrderSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "資料格式錯誤" }, { status: 400 });
+    }
+    const data = parsed.data;
+
+    // ── POS (cashier) orders: admin session, cash only, no location gate ──
+    if (data.pos) {
+      const admin = await getSession();
+      if (!admin) return NextResponse.json({ error: "請先登入管理員帳號" }, { status: 401 });
+      await orderLimiter.acquire();
+      try {
+        const result = await createOrder({
+          studentId: "POS",
+          studentName: "現場點餐",
+          className: null,
+          department: data.department,
+          note: data.note ?? null,
+          paymentMethod: "cash",
+          pickupDate: null,
+          pickupTime: null,
+          items: data.items,
+          source: "pos",
+          createdBy: admin.username,
+          idempotencyKey: data.idempotencyKey,
+        });
+        orderCircuitBreaker.recordSuccess();
+        return NextResponse.json(result, { status: 201 });
+      } finally {
+        orderLimiter.release();
+      }
     }
 
-    // Override any client-supplied studentId with the authenticated one.
-    const data = { ...parsed.data, studentId: session.studentId };
+    // ── Student orders ──
+    const session = await getStudentSession();
+    if (!session) return NextResponse.json({ error: "請先登入" }, { status: 401 });
 
-    // Verify the authenticated student's record still exists (e.g. wasn't
-    // deleted mid-session by admin).
-    const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
+    // A whole school can share one public IP — keep the IP limit generous and
+    // rely on the per-student limit for fairness.
+    const ip = getClientIp(req);
+    if (!rateLimit(`order-ip:${ip}`, 600, 5 * 60 * 1000).allowed) {
+      return NextResponse.json({ error: "系統忙碌中，請稍後再試" }, { status: 429 });
+    }
+    if (!rateLimit(`order-student:${session.studentId}`, 5, 5 * 60 * 1000).allowed) {
+      return NextResponse.json({ error: "下單太頻繁，請稍後再試" }, { status: 429 });
+    }
+
+    if (data.paymentMethod === "ecpay" && !onlinePaymentEnabled()) {
+      return NextResponse.json({ error: "線上付款尚未開放" }, { status: 400 });
+    }
+
+    const studentDoc = await adminDb.collection("students").doc(session.studentId).get();
     if (!studentDoc.exists) {
-      return NextResponse.json(
-        { error: "帳號不存在或已被停用" },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "帳號不存在或已被停用" }, { status: 403 });
     }
-    // Also override display fields from the server-side record so a
-    // spoofed studentName / className in the body can't attach false
-    // labels to the receipt.
-    const authoritative = studentDoc.data()!;
-    data.studentName = authoritative.studentName || data.studentName || null;
-    data.className = authoritative.className || data.className || null;
+    const student = studentDoc.data()!;
 
-    // Location gate: always read the *current* app-config on the server so an
-    // admin toggling `requireLocation` takes effect on the very next order,
-    // regardless of any client-side or CDN cached copy.
+    // Location gate — read live config (fail closed).
     try {
       const cfgSnap = await adminDb.collection("settings").doc("app-config").get();
       const requireLocation = cfgSnap.exists ? cfgSnap.data()?.requireLocation !== false : true;
       if (requireLocation) {
-        if (!data.coords) {
-          return NextResponse.json(
-            { error: "請允許定位權限以確認您在校園內" },
-            { status: 403 }
-          );
-        }
+        if (!data.coords) return NextResponse.json({ error: "請允許定位權限以確認您在校園內" }, { status: 403 });
         if (!isWithinSchool(data.coords.lat, data.coords.lng)) {
-          return NextResponse.json(
-            { error: "請在校園範圍內下單" },
-            { status: 403 }
-          );
+          return NextResponse.json({ error: "請在校園範圍內下單" }, { status: 403 });
         }
       }
     } catch (err) {
       console.error("Location gate check failed:", err);
-      // Fail closed rather than open — if we can't verify, don't accept the order.
-      return NextResponse.json(
-        { error: "系統暫時無法驗證位置，請稍後再試" },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: "系統暫時無法驗證位置，請稍後再試" }, { status: 503 });
     }
 
-    // Per-student rate limit: max 3 orders per student per 5 minutes
-    const studentRl = rateLimit(`student:${data.studentId}`, 3, 5 * 60 * 1000);
-    if (!studentRl.allowed) {
-      return NextResponse.json(
-        { error: "同一學號訂單送出太頻繁，請稍後再試" },
-        { status: 429 }
-      );
-    }
-
-    // Sanitize strings
-    const sanitize = (s: string | null | undefined) =>
-      s ? s.replace(/[<>]/g, "").trim() : null;
-
-    // Batch-read all menu items in a single Firestore call
-    const menuRefs = data.items.map((item) =>
-      adminDb.collection("menuItems").doc(item.menuItemId)
-    );
-    const menuDocs = await adminDb.getAll(...menuRefs);
-
-    const verifiedItems: { menuItemId: string; name: string; quantity: number; price: number }[] = [];
-    let totalPrice = 0;
-
-    for (let i = 0; i < data.items.length; i++) {
-      const menuDoc = menuDocs[i];
-      if (!menuDoc.exists) {
-        return NextResponse.json(
-          { error: `品項不存在: ${data.items[i].name}` },
-          { status: 400 }
-        );
-      }
-      const menuData = menuDoc.data()!;
-      if (!menuData.available) {
-        return NextResponse.json(
-          { error: `品項已停售: ${menuData.name}` },
-          { status: 400 }
-        );
-      }
-      verifiedItems.push({
-        menuItemId: data.items[i].menuItemId,
-        name: menuData.name,
-        quantity: data.items[i].quantity,
-        price: menuData.price,
-      });
-      totalPrice += menuData.price * data.items[i].quantity;
-    }
-
-    // Acquire concurrency slot
     await orderLimiter.acquire();
-
+    let result;
     try {
-      // Atomic order number via Firestore transaction
-      const now = new Date();
-      const yyyy = String(now.getFullYear());
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const dd = String(now.getDate()).padStart(2, "0");
-      const todayDate = `${yyyy}${mm}${dd}`;
-
-      const counterRef = adminDb.collection("counters").doc("orderNumber");
-
-      const result = await adminDb.runTransaction(async (tx) => {
-        // === ALL READS FIRST (Firestore requirement) ===
-        const freshMenuDocs = await Promise.all(
-          menuRefs.map((ref) => tx.get(ref))
-        );
-        const counterDoc = await tx.get(counterRef);
-
-        let walletSnap: FirebaseFirestore.DocumentSnapshot | null = null;
-        const walletRef = data.paymentMethod === "wallet"
-          ? adminDb.collection("wallets").doc(data.studentId)
-          : null;
-        if (walletRef) {
-          walletSnap = await tx.get(walletRef);
-        }
-
-        // === VALIDATION ===
-        for (let i = 0; i < data.items.length; i++) {
-          const menuData = freshMenuDocs[i].data()!;
-          if (menuData.stock !== null && menuData.stock !== undefined) {
-            if (menuData.stock < data.items[i].quantity) {
-              throw new Error(`庫存不足: ${menuData.name}（剩餘 ${menuData.stock} 份）`);
-            }
-          }
-          if (menuData.soldOut) {
-            throw new Error(`已售罄: ${menuData.name}`);
-          }
-        }
-
-        if (data.paymentMethod === "wallet") {
-          if (!walletSnap || !walletSnap.exists) {
-            throw new Error("WALLET_NOT_FOUND");
-          }
-          const wallet = walletSnap.data()!;
-          if (wallet.balance < totalPrice) {
-            throw new Error("INSUFFICIENT_BALANCE");
-          }
-        }
-
-        // === ALL WRITES ===
-
-        // Wallet deduction
-        if (data.paymentMethod === "wallet" && walletRef && walletSnap) {
-          const wallet = walletSnap.data()!;
-          const newBalance = wallet.balance - totalPrice;
-          tx.update(walletRef, { balance: newBalance, updatedAt: new Date().toISOString() });
-
-          const walletTxRef = adminDb.collection("wallet_transactions").doc();
-          tx.set(walletTxRef, {
-            studentId: data.studentId,
-            amount: -totalPrice,
-            type: "payment",
-            method: "wallet",
-            note: null,
-            balanceAfter: newBalance,
-            createdAt: new Date().toISOString(),
-            createdBy: data.studentId,
-          });
-        }
-
-        // Decrement stock
-        for (let i = 0; i < data.items.length; i++) {
-          const menuData = freshMenuDocs[i].data()!;
-          if (menuData.stock !== null && menuData.stock !== undefined) {
-            const newStock = menuData.stock - data.items[i].quantity;
-            const updates: Record<string, unknown> = { stock: newStock };
-            if (newStock <= 0) {
-              updates.soldOut = true;
-              updates.available = false;
-            }
-            tx.update(menuRefs[i], updates);
-          }
-        }
-
-        // Order number
-        let seq = 1;
-        if (counterDoc.exists) {
-          const counterData = counterDoc.data()!;
-          if (counterData.date === todayDate) {
-            seq = (counterData.seq || 0) + 1;
-          }
-        }
-        tx.set(counterRef, { date: todayDate, seq });
-
-        const orderNumber = `${todayDate}${String(seq).padStart(4, "0")}`;
-
-        const orderRef = adminDb.collection("orders").doc();
-        tx.set(orderRef, {
-          studentId: sanitize(data.studentId)!,
-          studentName: sanitize(data.studentName),
-          className: sanitize(data.className),
-          department: data.department,
-          note: sanitize(data.note),
-          paymentMethod: data.paymentMethod,
-          pickupDate: sanitize(data.pickupDate),
-          pickupTime: sanitize(data.pickupTime),
-          totalPrice,
-          status: "pending",
-          orderNumber,
-          items: verifiedItems,
-          createdAt: FieldValue.serverTimestamp(),
-        });
-
-        return { id: orderRef.id, orderNumber };
+      result = await createOrder({
+        studentId: session.studentId,
+        studentName: student.studentName || null,
+        className: student.className || null,
+        department: data.department,
+        note: data.note ?? null,
+        paymentMethod: data.paymentMethod,
+        pickupDate: data.pickupDate ?? null,
+        pickupTime: data.pickupTime ?? null,
+        items: data.items,
+        source: "student",
+        createdBy: session.studentId,
+        idempotencyKey: data.idempotencyKey,
       });
-
       orderCircuitBreaker.recordSuccess();
-
-      // Send order confirmation based on notification preference
-      try {
-        const studentDoc = await adminDb.collection("students").doc(data.studentId).get();
-        const notifyMethod = studentDoc.exists ? (studentDoc.data()?.notifyMethod || "email") : "email";
-
-        if (notifyMethod === "email" || !notifyMethod) {
-          const studentEmail = studentDoc.exists ? studentDoc.data()?.email : null;
-          if (studentEmail) {
-            await sendOrderNotification({
-              to: studentEmail,
-              studentName: sanitize(data.studentName) || "",
-              orderNumber: result.orderNumber,
-              status: "pending",
-              department: data.department,
-              items: verifiedItems,
-              totalPrice,
-            });
-          }
-        }
-      } catch (notifyErr) {
-        console.error("Order confirmation notification error:", notifyErr);
-      }
-
-      return NextResponse.json(result, { status: 201 });
     } finally {
       orderLimiter.release();
     }
-  } catch (err) {
-    // Stock/soldOut errors are user-facing
-    if (err instanceof Error) {
-      if (err.message.startsWith("庫存不足") || err.message.startsWith("已售罄")) {
-        return NextResponse.json({ error: err.message }, { status: 400 });
-      }
-      if (err.message === "WALLET_NOT_FOUND") {
-        return NextResponse.json({ error: "找不到錢包，請先開通錢包" }, { status: 404 });
-      }
-      if (err.message === "INSUFFICIENT_BALANCE") {
-        return NextResponse.json({ error: "錢包餘額不足" }, { status: 400 });
-      }
+
+    let redirectUrl: string | null = null;
+    if (result.status === "awaiting_payment") {
+      const mtn = await createOrderPayment(result.id, session.studentId);
+      redirectUrl = `/api/payments/ecpay/redirect/${mtn}`;
+    } else if (!result.replayed) {
+      const snap = await adminDb.collection("orders").doc(result.id).get();
+      if (snap.exists) await notifyOrderStatus(result.id, snap.data()!, "pending");
     }
+
+    return NextResponse.json(
+      { id: result.id, orderNumber: result.orderNumber, totalPrice: result.totalPrice, status: result.status, redirectUrl },
+      { status: 201 }
+    );
+  } catch (err) {
+    const known = errorResponse(err);
+    if (known) return known;
     orderCircuitBreaker.recordFailure();
     console.error("POST /api/orders error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });
@@ -345,20 +170,18 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/** Admin order feed (today, Taipei time). Replaces the client-SDK listener. */
 export async function GET(req: NextRequest) {
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
   try {
+    expireStalePaymentOrders().catch((e) => console.error("expiry sweep", e));
+
     const department = req.nextUrl.searchParams.get("department");
     const status = req.nextUrl.searchParams.get("status");
+    const includeUnpaid = req.nextUrl.searchParams.get("includeUnpaid") === "1";
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    // Use createdAt >= todayStart to only read today's orders from Firestore
-    let q: FirebaseFirestore.Query = adminDb
-      .collection("orders")
-      .where("createdAt", ">=", todayStart);
-
-    const snap = await q.get();
+    const snap = await adminDb.collection("orders").where("createdAt", ">=", taipeiStartOfDay()).get();
 
     let orders = snap.docs.map((d) => {
       const data = d.data();
@@ -366,24 +189,20 @@ export async function GET(req: NextRequest) {
         id: d.id,
         ...data,
         createdAt: data.createdAt?.toDate?.()?.toISOString?.() ?? new Date().toISOString(),
-      };
+        confirmedAt: data.confirmedAt?.toDate?.()?.toISOString?.() ?? null,
+        readyAt: data.readyAt?.toDate?.()?.toISOString?.() ?? null,
+        pickedUpAt: data.pickedUpAt?.toDate?.()?.toISOString?.() ?? null,
+        cancelledAt: data.cancelledAt?.toDate?.()?.toISOString?.() ?? null,
+      } as unknown as Record<string, unknown> & { createdAt: string; department: string; status: string };
     });
 
-    // Filter by department and status in JS (avoids composite index)
-    if (department) {
-      orders = orders.filter((o: Record<string, unknown>) => o.department === department);
-    }
-    if (status) {
-      orders = orders.filter((o: Record<string, unknown>) => o.status === status);
-    }
+    // Kitchen shouldn't see orders whose online payment hasn't completed.
+    if (!includeUnpaid) orders = orders.filter((o) => o.status !== "awaiting_payment" && o.status !== "payment_failed");
+    if (department) orders = orders.filter((o) => o.department === department);
+    if (status && status !== "all") orders = orders.filter((o) => o.status === status);
+    orders.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-    orders.sort((a: Record<string, unknown>, b: Record<string, unknown>) =>
-      new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
-    );
-
-    return NextResponse.json(orders, {
-      headers: { "Cache-Control": "private, max-age=5" },
-    });
+    return NextResponse.json(orders, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     console.error("GET /api/orders error:", err);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });

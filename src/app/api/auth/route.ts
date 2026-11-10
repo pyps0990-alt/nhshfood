@@ -1,78 +1,84 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createToken } from "@/lib/auth";
+import { createToken, adminCookieOptions, ADMIN_COOKIE_NAME } from "@/lib/auth";
 import { adminDb } from "@/lib/firebase-admin";
 import { createHash, timingSafeEqual } from "crypto";
-import { rateLimit, getClientIp } from "@/lib/rate-limit";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { rateLimit, durableRateLimit, resetDurableRateLimit, getClientIp } from "@/lib/rate-limit";
+import { auditLog } from "@/lib/security";
 
-function hashPassword(password: string) {
-  return createHash("sha256").update(password).digest("hex");
+const schema = z.object({
+  username: z.string().min(1).max(50).trim(),
+  password: z.string().min(1).max(100),
+});
+
+// A real bcrypt hash used to keep timing uniform when the user doesn't exist.
+let dummyHash: string | null = null;
+function getDummyHash() {
+  if (!dummyHash) dummyHash = bcrypt.hashSync("timing-equaliser", 12);
+  return dummyHash;
 }
 
-function safeCompare(a: string, b: string): boolean {
-  try {
-    const bufA = Buffer.from(a);
-    const bufB = Buffer.from(b);
-    if (bufA.length !== bufB.length) return false;
-    return timingSafeEqual(bufA, bufB);
-  } catch {
-    return false;
-  }
+function legacySha256Matches(password: string, stored: string): boolean {
+  const input = Buffer.from(createHash("sha256").update(password).digest("hex"));
+  const target = Buffer.from(stored);
+  return input.length === target.length && timingSafeEqual(input, target);
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit: max 5 login attempts per IP per 15 minutes
     const ip = getClientIp(req);
-    const { allowed } = rateLimit(`login:${ip}`, 5, 15 * 60 * 1000);
-    if (!allowed) {
-      return NextResponse.json(
-        { error: "登入嘗試太頻繁，請 15 分鐘後再試" },
-        { status: 429 }
-      );
+    if (!rateLimit(`admin-login:${ip}`, 10, 15 * 60 * 1000).allowed) {
+      return NextResponse.json({ error: "登入嘗試太頻繁，請 15 分鐘後再試" }, { status: 429 });
     }
 
-    const { username, password } = await req.json();
-
-    if (!username || !password) {
+    const parsed = schema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
       return NextResponse.json({ error: "請輸入帳號密碼" }, { status: 400 });
     }
+    const { username, password } = parsed.data;
 
-    if (typeof username !== "string" || typeof password !== "string") {
-      return NextResponse.json({ error: "格式錯誤" }, { status: 400 });
+    // Durable limits shared by all serverless instances.
+    const [byIp, byUser] = await Promise.all([
+      durableRateLimit(`admin-login:ip:${ip}`, 20, 15 * 60 * 1000),
+      durableRateLimit(`admin-login:user:${username.toLowerCase()}`, 8, 15 * 60 * 1000),
+    ]);
+    if (!byIp.allowed || !byUser.allowed) {
+      return NextResponse.json({ error: "登入嘗試太頻繁，請 15 分鐘後再試" }, { status: 429 });
     }
 
-    if (username.length > 50 || password.length > 100) {
-      return NextResponse.json({ error: "輸入過長" }, { status: 400 });
+    const snap = await adminDb.collection("admins").where("username", "==", username).limit(1).get();
+    const doc = snap.empty ? null : snap.docs[0];
+    const stored: string = doc?.data().passwordHash || "";
+
+    let ok = false;
+    let needsUpgrade = false;
+    if (stored.startsWith("$2")) {
+      ok = await bcrypt.compare(password, stored);
+    } else if (/^[0-9a-f]{64}$/i.test(stored)) {
+      ok = legacySha256Matches(password, stored);
+      needsUpgrade = ok;
+    } else {
+      await bcrypt.compare(password, getDummyHash());
     }
 
-    const snap = await adminDb
-      .collection("admins")
-      .where("username", "==", username)
-      .get();
-
-    if (snap.empty) {
-      // Use same error message to prevent username enumeration
+    if (!doc || !ok || doc.data().disabled === true) {
+      await auditLog({ actor: username, action: "admin.login_failed", ip });
       return NextResponse.json({ error: "帳號或密碼錯誤" }, { status: 401 });
     }
 
-    const admin = snap.docs[0].data();
-    const inputHash = hashPassword(password);
-
-    if (!safeCompare(inputHash, admin.passwordHash)) {
-      return NextResponse.json({ error: "帳號或密碼錯誤" }, { status: 401 });
+    if (needsUpgrade) {
+      await doc.ref.update({
+        passwordHash: await bcrypt.hash(password, 12),
+        passwordUpgradedAt: new Date().toISOString(),
+      }).catch((e) => console.error("admin hash upgrade failed:", e));
     }
-
-    const token = await createToken(username);
+    await doc.ref.update({ lastLoginAt: new Date().toISOString(), lastLoginIp: ip }).catch(() => {});
+    await resetDurableRateLimit(`admin-login:user:${username.toLowerCase()}`);
+    await auditLog({ actor: username, action: "admin.login", ip });
 
     const res = NextResponse.json({ success: true });
-    res.cookies.set("admin_token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: 60 * 60 * 8, // 8 hours
-      path: "/",
-    });
-
+    res.cookies.set(ADMIN_COOKIE_NAME, await createToken(username), adminCookieOptions());
     return res;
   } catch (err) {
     console.error("POST /api/auth error:", err);
@@ -82,12 +88,6 @@ export async function POST(req: NextRequest) {
 
 export async function DELETE() {
   const res = NextResponse.json({ success: true });
-  res.cookies.set("admin_token", "", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "strict",
-    maxAge: 0,
-    path: "/",
-  });
+  res.cookies.set(ADMIN_COOKIE_NAME, "", adminCookieOptions(0));
   return res;
 }

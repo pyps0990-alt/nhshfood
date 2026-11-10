@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/auth";
+import { auditLog } from "@/lib/security";
 
 const DOC_ID = "app-config";
 const COLLECTION = "settings";
@@ -28,11 +29,8 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const jar = await cookies();
-  const session = jar.get("admin_token");
-  if (!session) {
-    return NextResponse.json({ error: "未授權" }, { status: 401 });
-  }
+  const auth = await requireAdmin();
+  if (auth instanceof NextResponse) return auth;
 
   try {
     const body = await req.json();
@@ -41,6 +39,7 @@ export async function PUT(req: NextRequest) {
     if (typeof body.requireSchoolEmail === "boolean") update.requireSchoolEmail = body.requireSchoolEmail;
 
     await adminDb.collection(COLLECTION).doc(DOC_ID).set(update, { merge: true });
+    await auditLog({ actor: auth.username, action: "settings.app_config", detail: update });
     const snap = await adminDb.collection(COLLECTION).doc(DOC_ID).get();
     return NextResponse.json({ ...DEFAULTS, ...snap.data() });
   } catch (err) {

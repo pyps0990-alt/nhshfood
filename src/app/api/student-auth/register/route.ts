@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { createStudentToken, studentCookieOptions, STUDENT_COOKIE_NAME } from "@/lib/auth";
+import { durableRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const passwordSchema = z
   .string()
@@ -14,7 +15,7 @@ const passwordSchema = z
   .regex(/[^A-Za-z0-9]/, "密碼需包含至少一個特殊符號");
 
 const registerSchema = z.object({
-  studentId: z.string().min(1).max(20).trim(),
+  studentId: z.string().trim().min(1).max(20).regex(/^[A-Za-z0-9]+$/, "學號只能包含英文與數字"),
   password: passwordSchema,
   className: z.string().min(1).max(10).trim(),
   studentName: z.string().min(1).max(50).trim(),
@@ -31,7 +32,13 @@ async function getAppConfig() {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    // School Wi-Fi shares one public IP, so keep this generous.
+    const rl = await durableRateLimit(`register:${getClientIp(req)}`, 60, 60 * 60 * 1000);
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "註冊嘗試過於頻繁，請稍後再試" }, { status: 429 });
+    }
+
+    const body = await req.json().catch(() => null);
     const parsed = registerSchema.safeParse(body);
     if (!parsed.success) {
       const firstError = parsed.error.issues[0]?.message || "資料格式錯誤";
@@ -73,7 +80,12 @@ export async function POST(req: NextRequest) {
     };
     if (displayName) doc.displayName = sanitize(displayName);
 
-    await adminDb.collection("students").doc(docId).set(doc);
+    try {
+      // create() fails atomically if the doc appeared since the check above.
+      await adminDb.collection("students").doc(docId).create(doc);
+    } catch {
+      return NextResponse.json({ error: "此學號已註冊，請直接登入" }, { status: 409 });
+    }
 
     const res = NextResponse.json({
       id: docId,

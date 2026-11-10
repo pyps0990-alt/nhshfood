@@ -3,6 +3,7 @@ import { adminDb } from "@/lib/firebase-admin";
 import { getSession, getStudentSession } from "@/lib/auth";
 import { rateLimit, getClientIp } from "@/lib/rate-limit";
 import { z } from "zod";
+import { secureCode } from "@/lib/security";
 
 const querySchema = z.object({
   studentId: z.string().min(1).max(20).trim(),
@@ -10,7 +11,7 @@ const querySchema = z.object({
 
 async function generateUniqueWalletCode(): Promise<string> {
   for (let i = 0; i < 10; i++) {
-    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const code = secureCode(8);
     const existing = await adminDb
       .collection("wallets")
       .where("walletCode", "==", code)
@@ -23,7 +24,7 @@ async function generateUniqueWalletCode(): Promise<string> {
 
 export async function GET(req: NextRequest) {
   const ip = getClientIp(req);
-  const { allowed } = rateLimit(ip, 30, 60 * 1000);
+  const { allowed } = rateLimit(`wallet:${ip}`, 300, 60 * 1000);
   if (!allowed) {
     return NextResponse.json({ error: "請求太頻繁，請稍後再試" }, { status: 429 });
   }
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
   if (!studentId) {
     const session = await getSession();
     if (!session) {
-      return NextResponse.json({ error: "請提供有效的學號" }, { status: 400 });
+      return NextResponse.json({ error: "請先登入" }, { status: 401 });
     }
 
     try {
@@ -117,11 +118,13 @@ export async function GET(req: NextRequest) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
-      await walletRef.set(walletData);
-      return NextResponse.json(walletData);
+      // create() so two concurrent first-visits can't both write.
+      await walletRef.create(walletData).catch(() => {});
+      const fresh = await walletRef.get();
+      return NextResponse.json(fresh.data(), { headers: { "Cache-Control": "no-store" } });
     }
 
-    return NextResponse.json(walletSnap.data());
+    return NextResponse.json(walletSnap.data(), { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Wallet GET error:", error);
     return NextResponse.json({ error: "伺服器錯誤" }, { status: 500 });

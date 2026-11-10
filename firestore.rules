@@ -32,22 +32,13 @@ service cloud.firestore {
     }
 
     // ── Orders ──────────────────────────────────────────────────
-    // Individual order status page (/order/[id]) needs `get` by the exact
-    // Firestore-generated ID. IDs are 20-char unguessable strings; treating
-    // that as the capability token is standard.
-    //
-    // `list` (queries) is DENIED for clients. The admin dashboard's realtime
-    // listener bypasses these rules because it authenticates through the
-    // Next.js API layer using firebase-admin — see /api/orders/*.
-    //
-    // NOTE: today the admin dashboard's list query goes through the client
-    // SDK. Before enforcing these rules on the live project, that listener
-    // must be migrated to a server-authenticated stream (or the admin must
-    // sign in to Firebase with a custom token containing an `admin` claim).
-    // Until then, admin list falls back to the transitional rule below.
+    // The order status page (/order/[id]) listens to a single order by its
+    // 20-char random ID (capability URL). Listing/querying is denied: the
+    // admin dashboard now reads orders through the authenticated
+    // /api/orders endpoint instead of the client SDK.
     match /orders/{orderId} {
       allow get: if true;
-      allow list: if isAdminBearer();
+      allow list: if false;
       allow create, update, delete: if false;
     }
 
@@ -79,6 +70,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ── Server-only collections ────────────────────────────────
+    match /payments/{id}          { allow read, write: if false; }
+    match /payment_events/{id}    { allow read, write: if false; }
+    match /admin_audit/{id}       { allow read, write: if false; }
+    match /admins/{id}            { allow read, write: if false; }
+    match /rate_limits/{id}       { allow read, write: if false; }
+    match /order_idempotency/{id} { allow read, write: if false; }
+    match /topup_idempotency/{id} { allow read, write: if false; }
+    match /counters/{id}          { allow read, write: if false; }
+
     // ── Push subscriptions ─────────────────────────────────────
     match /push_subscriptions/{subId} {
       allow read, write: if false;
@@ -99,15 +100,7 @@ service cloud.firestore {
     }
   }
 
-  // Transitional: admin panel currently listens to /orders via the client
-  // SDK without Firebase auth. Until that listener is migrated to a server
-  // stream, allow `list` on orders when the request originates from an
-  // admin-authenticated context. This function must be updated when we
-  // switch admins to Firebase custom tokens.
-  //
-  // For now it returns false — deploy this file only AFTER migrating the
-  // admin listener, or leave allow list = if true; during the interim
-  // window and note the exception in the security audit.
+  // Reserved for a future Firebase-Auth-based admin client.
   function isAdminBearer() {
     // Placeholder: requires Firebase Auth custom claim `admin == true`.
     // When admins are issued Firebase custom tokens, this becomes:

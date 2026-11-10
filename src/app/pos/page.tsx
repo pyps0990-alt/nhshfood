@@ -100,9 +100,7 @@ export default function POSPage() {
   async function submitOrder() {
     if (cart.length === 0) return;
     await createOrderSecure({
-      studentId: "POS",
-      studentName: "現場點餐",
-      className: null,
+      pos: true,
       department: dept,
       note: null,
       pickupDate: null,

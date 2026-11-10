@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   db,
   collection,
@@ -126,43 +126,77 @@ export function useAllMenuItems(department: string) {
   return { items, loading };
 }
 
-// ==================== Orders (today only, shared listener) ====================
+// ==================== Orders (admin feed) ====================
+// Polls the admin-authenticated /api/orders endpoint. The client SDK can no
+// longer list orders (Firestore rules deny it), which closes a data leak.
+// One shared poller per department so POS / receiver / dashboard tabs don't
+// multiply requests.
+
+type OrdersListener = (orders: Order[], error: string | null) => void;
+const orderFeeds = new Map<string, { listeners: Set<OrdersListener>; timer: ReturnType<typeof setTimeout> | null; last: Order[] | null; etag: string }>();
+const ORDER_POLL_MS = 3000;
+
+function startOrderFeed(department: string) {
+  const feed = orderFeeds.get(department)!;
+  const tick = async () => {
+    if (!orderFeeds.has(department)) return;
+    if (typeof document !== "undefined" && document.hidden) {
+      feed.timer = setTimeout(tick, ORDER_POLL_MS * 3);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/orders?department=${encodeURIComponent(department)}`, { cache: "no-store" });
+      if (res.status === 401) {
+        feed.listeners.forEach((l) => l(feed.last || [], "unauthorized"));
+        if (typeof window !== "undefined") window.location.href = "/admin/login";
+        return;
+      }
+      if (res.ok) {
+        const text = await res.text();
+        if (text !== feed.etag) {
+          feed.etag = text;
+          feed.last = JSON.parse(text) as Order[];
+          feed.listeners.forEach((l) => l(feed.last!, null));
+        }
+      }
+    } catch {
+      feed.listeners.forEach((l) => l(feed.last || [], "network"));
+    }
+    if (orderFeeds.has(department)) feed.timer = setTimeout(tick, ORDER_POLL_MS);
+  };
+  tick();
+}
+
 export function useOrders(department: string, filterStatus?: string) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [all, setAll] = useState<Order[] | null>(() => orderFeeds.get(department)?.last ?? null);
 
   useEffect(() => {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    // Query only today's orders using createdAt >= todayStart
-    const q = query(
-      collection(db, "orders"),
-      where("createdAt", ">=", todayStart)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      let data = snap.docs.map((d) => {
-        const raw = d.data();
-        const createdAt = raw.createdAt?.toDate?.() ?? new Date();
-        return {
-          id: d.id,
-          ...raw,
-          createdAt: createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString(),
-        } as Order & { _createdDate: Date };
-      });
-      // Filter department and status in JS (avoids composite index)
-      data = data.filter((o) => o.department === department);
-      if (filterStatus && filterStatus !== "all") {
-        data = data.filter((o) => o.status === filterStatus);
+    let feed = orderFeeds.get(department);
+    const listener: OrdersListener = (o) => setAll(o);
+    if (!feed) {
+      feed = { listeners: new Set([listener]), timer: null, last: null, etag: "" };
+      orderFeeds.set(department, feed);
+      startOrderFeed(department);
+    } else {
+      feed.listeners.add(listener);
+    }
+    return () => {
+      const f = orderFeeds.get(department);
+      if (!f) return;
+      f.listeners.delete(listener);
+      if (f.listeners.size === 0) {
+        if (f.timer) clearTimeout(f.timer);
+        orderFeeds.delete(department);
       }
-      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      setOrders(data);
-      setLoading(false);
-    });
-    return unsub;
-  }, [department, filterStatus]);
+    };
+  }, [department]);
 
-  return { orders, loading };
+  const orders = useMemo(() => {
+    if (!all) return [];
+    return filterStatus && filterStatus !== "all" ? all.filter((o) => o.status === filterStatus) : all;
+  }, [all, filterStatus]);
+
+  return { orders, loading: all === null };
 }
 
 export function useOrder(id: string) {
@@ -246,12 +280,26 @@ export function preloadLocation() {
   checkSchoolLocation().catch(() => {});
 }
 
-let pendingOrderRequest: Promise<{ id: string; orderNumber: string }> | null = null;
+let pendingOrderRequest: Promise<CreateOrderResult> | null = null;
+
+export interface CreateOrderResult {
+  id: string;
+  orderNumber: string;
+  totalPrice?: number;
+  status?: string;
+  /** Present for online payment: navigate here to hand off to ECPay. */
+  redirectUrl?: string | null;
+}
+
+function newIdempotencyKey(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+}
 
 export async function createOrderSecure(data: {
-  studentId: string;
-  studentName: string | null;
-  className: string | null;
+  studentId?: string;
+  studentName?: string | null;
+  className?: string | null;
   department: string;
   note: string | null;
   paymentMethod?: string;
@@ -259,36 +307,35 @@ export async function createOrderSecure(data: {
   pickupTime: string | null;
   items: { menuItemId: string; name: string; quantity: number; price: number }[];
   coords?: { lat: number; lng: number } | null;
-}): Promise<{ id: string; orderNumber: string }> {
-  // Prevent double submission
+  pos?: boolean;
+}): Promise<CreateOrderResult> {
+  // Prevent double submission from the same tab.
   if (pendingOrderRequest) return pendingOrderRequest;
+
+  // Same key for the retry below → the server returns the same order instead
+  // of creating a duplicate (and double-charging the wallet).
+  const body = JSON.stringify({ ...data, idempotencyKey: newIdempotencyKey() });
+
+  const send = async () => {
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "送出失敗" }));
+      throw new Error(err.error || "送出失敗");
+    }
+    return res.json() as Promise<CreateOrderResult>;
+  };
 
   pendingOrderRequest = (async () => {
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "送出失敗" }));
-        throw new Error(err.error || "送出失敗");
-      }
-      return res.json();
+      return await send();
     } catch (err) {
-      // One retry with backoff for network errors
       if (err instanceof TypeError) {
         await new Promise((r) => setTimeout(r, 1000));
-        const res = await fetch("/api/orders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data),
-        });
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({ error: "送出失敗" }));
-          throw new Error(errBody.error || "送出失敗");
-        }
-        return res.json();
+        return send();
       }
       throw err;
     } finally {

@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { getSession } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
+import { menuCreateSchema } from "@/lib/schemas/menu";
+import { auditLog } from "@/lib/security";
 import { getMenuCache, setMenuCache, invalidateMenuCache } from "@/lib/menu-cache";
 
 export async function GET(req: NextRequest) {
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
     }
 
     let q: FirebaseFirestore.Query = adminDb.collection("menuItems");
-    if (department) q = q.where("department", "==", department);
+    if (department === "breakfast" || department === "lunch") q = q.where("department", "==", department);
 
     const snap = await q.get();
     let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
@@ -49,49 +51,29 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    // Only admins can add menu items
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "未授權" }, { status: 401 });
+    const auth = await requireAdmin();
+    if (auth instanceof NextResponse) return auth;
+
+    const parsed = menuCreateSchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || "資料格式錯誤" }, { status: 400 });
     }
-
-    const body = await req.json();
-
-    // Validate
-    if (!body.name || !body.category || !body.department) {
-      return NextResponse.json({ error: "缺少必要欄位" }, { status: 400 });
-    }
-
-    if (typeof body.price !== "number" || body.price < 0 || body.price > 10000) {
-      return NextResponse.json({ error: "價格無效" }, { status: 400 });
-    }
-
-    const sanitize = (s: string | null | undefined) =>
-      s ? s.replace(/[<>]/g, "").trim().slice(0, 200) : null;
-
-    // Validate tags
-    const validTags = ["promotion", "seasonal", "daily_special"];
-    const tags = Array.isArray(body.tags)
-      ? body.tags.filter((t: string) => validTags.includes(t))
-      : [];
-
-    const stock = typeof body.stock === "number" && body.stock >= 0
-      ? Math.round(body.stock)
-      : null;
+    const d = parsed.data;
 
     const ref = await adminDb.collection("menuItems").add({
-      name: sanitize(body.name)!,
-      price: Math.round(body.price),
-      category: sanitize(body.category)!,
-      department: body.department === "lunch" ? "lunch" : "breakfast",
-      description: sanitize(body.description),
-      imageUrl: body.imageUrl || null,
+      name: d.name,
+      price: d.price,
+      category: d.category,
+      department: d.department,
+      description: d.description || null,
+      imageUrl: d.imageUrl ?? null,
       available: true,
-      tags,
-      stock,
+      tags: d.tags,
+      stock: d.stock ?? null,
       soldOut: false,
       createdAt: FieldValue.serverTimestamp(),
     });
+    await auditLog({ actor: auth.username, action: "menu.create", target: ref.id, detail: { name: d.name, price: d.price } });
 
     // Invalidate in-memory cache + purge the edge/CDN cache so the new item
     // appears on the very first paint. (The customer view's realtime listener
